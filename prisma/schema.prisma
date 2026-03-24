@@ -1,0 +1,260 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  avatarUrl String?
+  password  String?
+  role      Role      @default(CSM)
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  sessions  Session[]
+  accounts  ClientAccount[]
+  auditLogs AuditLog[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  ADMIN
+  LEADERSHIP
+  CSM
+  VIEWER
+}
+
+model ClientAccount {
+  id                 String         @id @default(cuid())
+  name               String
+  domain             String?
+  vitallyAccountId   String?        @unique
+  salesforceId       String?        @unique
+  csm                User?          @relation(fields: [csmId], references: [id])
+  csmId              String?
+  tier               String?
+  industry           String?
+  healthScore        Float?
+  healthStatus       HealthStatus   @default(UNKNOWN)
+  currentSolution    String?        @db.Text
+  currentState       String?        @db.Text
+  businessGoals      String?        @db.Text
+  objectives         String?        @db.Text
+  roadblocks         String?        @db.Text
+  implementationPlan String?        @db.Text
+  lastSyncedAt       DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  kpis               ClientKPI[]
+  signals            RawSignal[]
+  meetings           Meeting[]
+  contacts           Contact[]
+  reportSnapshots    ReportSnapshot[]
+}
+
+enum HealthStatus {
+  HEALTHY
+  AT_RISK
+  CRITICAL
+  UNKNOWN
+}
+
+model RawSignal {
+  id         String        @id @default(cuid())
+  account    ClientAccount @relation(fields: [accountId], references: [id])
+  accountId  String
+  source     SignalSource
+  externalId String?
+  title      String?
+  content    String        @db.Text
+  author     String?
+  url        String?
+  signalDate DateTime
+  embedding  Unsupported("vector(1536)")?
+  processed  Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+  kpiEvidence KPIEvidence[]
+
+  @@index([accountId, source])
+}
+
+enum SignalSource {
+  SLACK
+  FATHOM
+  AM_MEETING
+  VITALLY
+  SALESFORCE
+  PERSONAS
+  SHAREPOINT
+  JIRA
+  GOOGLE_DRIVE
+}
+
+model ClientKPI {
+  id              String        @id @default(cuid())
+  account         ClientAccount @relation(fields: [accountId], references: [id])
+  accountId       String
+  metricName      String
+  targetValue     String?
+  currentValue    String?
+  unit            String?
+  category        KPICategory
+  source          KPISource     @default(MANUAL)
+  status          KPIStatus     @default(ON_TRACK)
+  healthScore     Float?
+  healthStatus    HealthStatus  @default(UNKNOWN)
+  healthNarrative String?       @db.Text
+  healthTrend     HealthTrend   @default(STABLE)
+  lastScoredAt    DateTime?
+  videoTimestamp  Int?
+  videoClipUrl    String?
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  history         KPIHistory[]
+  evidence        KPIEvidence[]
+}
+
+model KPIEvidence {
+  id        String    @id @default(cuid())
+  kpi       ClientKPI @relation(fields: [kpiId], references: [id])
+  kpiId     String
+  signal    RawSignal @relation(fields: [signalId], references: [id])
+  signalId  String
+  excerpt   String    @db.Text
+  relevance Float
+  createdAt DateTime  @default(now())
+
+  @@unique([kpiId, signalId])
+}
+
+model KPIHistory {
+  id           String        @id @default(cuid())
+  kpi          ClientKPI     @relation(fields: [kpiId], references: [id])
+  kpiId        String
+  value        String
+  healthScore  Float?
+  healthStatus HealthStatus?
+  changedBy    String
+  changedAt    DateTime      @default(now())
+  note         String?
+}
+
+enum KPICategory {
+  DEFLECTION
+  EFFICIENCY
+  ADOPTION
+  REVENUE
+  SATISFACTION
+  RETENTION
+  CUSTOM
+}
+
+enum KPISource {
+  MANUAL
+  AI_EXTRACTED
+  VITALLY_SYNC
+  FATHOM_SYNC
+  SLACK_SIGNAL
+  SALESFORCE_SYNC
+  JIRA_SYNC
+  GDRIVE_SIGNAL
+  SHAREPOINT_SIGNAL
+}
+
+enum KPIStatus {
+  ON_TRACK
+  AT_RISK
+  ACHIEVED
+  MISSED
+}
+
+enum HealthTrend {
+  IMPROVING
+  STABLE
+  DECLINING
+}
+
+model Meeting {
+  id              String        @id @default(cuid())
+  fathomId        String?       @unique
+  account         ClientAccount @relation(fields: [accountId], references: [id])
+  accountId       String
+  title           String
+  recordingUrl    String?
+  transcriptRaw   String?       @db.Text
+  summaryAI       String?       @db.Text
+  duration        Int?
+  meetingDate     DateTime
+  syncedToVitally Boolean       @default(false)
+  extractedKPIs   Boolean       @default(false)
+  participants    String[]
+  createdAt       DateTime      @default(now())
+}
+
+model Contact {
+  id        String        @id @default(cuid())
+  account   ClientAccount @relation(fields: [accountId], references: [id])
+  accountId String
+  name      String
+  role      String?
+  email     String?
+  isPrimary Boolean       @default(false)
+}
+
+model ReportSnapshot {
+  id          String        @id @default(cuid())
+  account     ClientAccount @relation(fields: [accountId], references: [id])
+  accountId   String
+  pdfUrl      String
+  generatedBy String
+  generatedAt DateTime      @default(now())
+  version     Int
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}
+
+model SyncJob {
+  id          String       @id @default(cuid())
+  source      SignalSource
+  accountId   String?
+  status      JobStatus    @default(PENDING)
+  triggeredBy String
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  signalsFound Int?
+  kpisUpdated  Int?
+  createdAt   DateTime     @default(now())
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}

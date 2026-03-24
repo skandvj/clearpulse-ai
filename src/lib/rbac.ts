@@ -1,0 +1,93 @@
+import { Role } from "@prisma/client";
+
+export const PERMISSIONS = {
+  VIEW_ALL_ACCOUNTS: "VIEW_ALL_ACCOUNTS",
+  VIEW_OWN_ACCOUNTS: "VIEW_OWN_ACCOUNTS",
+  VIEW_KPI_HEALTH: "VIEW_KPI_HEALTH",
+  VIEW_SIGNAL_EVIDENCE: "VIEW_SIGNAL_EVIDENCE",
+  EDIT_ACCOUNT_FIELDS: "EDIT_ACCOUNT_FIELDS",
+  EDIT_KPIS: "EDIT_KPIS",
+  OVERRIDE_AI_HEALTH: "OVERRIDE_AI_HEALTH",
+  TRIGGER_SOURCE_SYNC: "TRIGGER_SOURCE_SYNC",
+  RUN_HEALTH_RESCORE: "RUN_HEALTH_RESCORE",
+  PUSH_TO_VITALLY: "PUSH_TO_VITALLY",
+  DOWNLOAD_PDF_REPORT: "DOWNLOAD_PDF_REPORT",
+  MANAGE_USERS: "MANAGE_USERS",
+  CONFIGURE_INTEGRATIONS: "CONFIGURE_INTEGRATIONS",
+  VIEW_AUDIT_LOGS: "VIEW_AUDIT_LOGS",
+  VIEW_SYNC_CONSOLE: "VIEW_SYNC_CONSOLE",
+} as const;
+
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+const ROLE_PERMISSIONS: Record<Role, Set<Permission>> = {
+  ADMIN: new Set([
+    PERMISSIONS.VIEW_ALL_ACCOUNTS,
+    PERMISSIONS.VIEW_OWN_ACCOUNTS,
+    PERMISSIONS.VIEW_KPI_HEALTH,
+    PERMISSIONS.VIEW_SIGNAL_EVIDENCE,
+    PERMISSIONS.EDIT_ACCOUNT_FIELDS,
+    PERMISSIONS.EDIT_KPIS,
+    PERMISSIONS.OVERRIDE_AI_HEALTH,
+    PERMISSIONS.TRIGGER_SOURCE_SYNC,
+    PERMISSIONS.RUN_HEALTH_RESCORE,
+    PERMISSIONS.PUSH_TO_VITALLY,
+    PERMISSIONS.DOWNLOAD_PDF_REPORT,
+    PERMISSIONS.MANAGE_USERS,
+    PERMISSIONS.CONFIGURE_INTEGRATIONS,
+    PERMISSIONS.VIEW_AUDIT_LOGS,
+    PERMISSIONS.VIEW_SYNC_CONSOLE,
+  ]),
+  LEADERSHIP: new Set([
+    PERMISSIONS.VIEW_ALL_ACCOUNTS,
+    PERMISSIONS.VIEW_KPI_HEALTH,
+    PERMISSIONS.VIEW_SIGNAL_EVIDENCE,
+    PERMISSIONS.DOWNLOAD_PDF_REPORT,
+  ]),
+  CSM: new Set([
+    PERMISSIONS.VIEW_OWN_ACCOUNTS,
+    PERMISSIONS.VIEW_KPI_HEALTH,
+    PERMISSIONS.VIEW_SIGNAL_EVIDENCE,
+    PERMISSIONS.EDIT_ACCOUNT_FIELDS,
+    PERMISSIONS.EDIT_KPIS,
+    PERMISSIONS.TRIGGER_SOURCE_SYNC,
+    PERMISSIONS.RUN_HEALTH_RESCORE,
+    PERMISSIONS.PUSH_TO_VITALLY,
+    PERMISSIONS.DOWNLOAD_PDF_REPORT,
+  ]),
+  VIEWER: new Set([
+    PERMISSIONS.VIEW_ALL_ACCOUNTS,
+    PERMISSIONS.VIEW_KPI_HEALTH,
+    PERMISSIONS.DOWNLOAD_PDF_REPORT,
+  ]),
+};
+
+export function hasPermission(role: Role, permission: Permission): boolean {
+  return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
+}
+
+export function getAllPermissions(role: Role): Permission[] {
+  return Array.from(ROLE_PERMISSIONS[role] ?? []);
+}
+
+export function canAccessAccount(
+  role: Role,
+  userId: string,
+  accountCsmId: string | null
+): boolean {
+  if (role === "ADMIN" || role === "LEADERSHIP" || role === "VIEWER") {
+    return true;
+  }
+  if (role === "CSM") {
+    return accountCsmId === userId;
+  }
+  return false;
+}
+
+export function requirePermission(role: Role, permission: Permission): void {
+  if (!hasPermission(role, permission)) {
+    throw new Error(
+      `Forbidden: role "${role}" lacks permission "${permission}"`
+    );
+  }
+}

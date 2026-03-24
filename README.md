@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ClearPulse
 
-## Getting Started
+ClearPulse is a Next.js 14 customer intelligence application for ingesting account signals, extracting KPIs with AI, and surfacing customer health for CSMs, admins, and leadership.
 
-First, run the development server:
+## Current Scope
+
+- Auth, RBAC, account management, signal ingestion, and KPI extraction are implemented.
+- Health scoring, reporting, and the leadership/admin surfaces are still in progress.
+- The repo currently builds successfully with `npm run build`.
+
+## Stack
+
+- Next.js 14 App Router
+- TypeScript
+- Tailwind CSS + shadcn/ui
+- Prisma + PostgreSQL
+- NextAuth v5
+- TanStack Query + TanStack Table
+- BullMQ + Upstash Redis
+- Anthropic + OpenAI embeddings
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Configure environment variables:
+
+- Use `.env.local.example` as the reference for required keys.
+- The current source adapters also rely on:
+  - `GOOGLE_REFRESH_TOKEN`
+  - `SALESFORCE_USERNAME`
+  - `SALESFORCE_PASSWORD`
+  - `SHAREPOINT_SITE_ID`
+  - `GDRIVE_CUSTOMERS_FOLDER_ID`
+
+3. Prepare the database:
+
+```bash
+npm run db:generate
+npm run db:push
+npm run db:seed
+```
+
+4. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Seeded Users
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The seed script creates local users for development:
 
-## Learn More
+- `admin@clearpulse.dev`
+- `leadership@clearpulse.dev`
+- `csm@clearpulse.dev`
+- `viewer@clearpulse.dev`
 
-To learn more about Next.js, take a look at the following resources:
+It also creates three demo accounts.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Useful Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev
+npm run build
+npm run db:generate
+npm run db:push
+npm run db:migrate
+npm run db:seed
+npm run db:studio
+```
 
-## Deploy on Vercel
+## Phase 4.5 Cleanup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This cleanup pass aligns the current repo with the implemented app by:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- normalizing account tier values across seed data, filters, and UI
+- fixing account list sort parameter mismatches
+- adding a working `/accounts/[id]/edit` route
+- keeping adapter environment references aligned with `src/lib/sources`
