@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const publicPaths = ["/login", "/api/auth"];
+const publicPaths = ["/", "/login", "/api/auth"];
 const adminOnlyPaths = ["/admin"];
 
 function isPublicPath(pathname: string): boolean {
@@ -41,10 +41,6 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith(adminPath) && token.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-  }
-
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   const response = NextResponse.next();
