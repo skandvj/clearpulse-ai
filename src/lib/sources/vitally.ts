@@ -1,6 +1,7 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { getIntegrationRuntimeValues } from "@/lib/integrations/settings";
 import { logError, logWarn } from "@/lib/logging";
 import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
@@ -42,15 +43,20 @@ export class VitallyAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
+    const config = await getIntegrationRuntimeValues(this.source, [
+      "VITALLY_API_KEY",
+    ]);
+
     const mockSignals = await resolveMockFallback({
       source: this.source,
       accountId,
       requiredEnv: ["VITALLY_API_KEY"],
+      resolvedValues: config,
       createMockSignals: () => this.generateMockSignals(accountId),
     });
     if (mockSignals) return mockSignals;
 
-    const apiKey = process.env.VITALLY_API_KEY!;
+    const apiKey = config.VITALLY_API_KEY!;
 
     try {
       const account = await prisma.clientAccount.findUniqueOrThrow({

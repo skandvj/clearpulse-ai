@@ -8,10 +8,14 @@ import {
 } from "@/lib/auth-helpers";
 import { PERMISSIONS } from "@/lib/rbac";
 import {
-  getConfiguredEnv,
   INTEGRATION_DEFINITIONS,
   type IntegrationStatus,
 } from "@/lib/integrations/catalog";
+import {
+  buildIntegrationFieldStates,
+  listIntegrationSettings,
+  summarizeIntegrationFields,
+} from "@/lib/integrations/settings";
 
 function resolveStatus(args: {
   configuredCount: number;
@@ -28,7 +32,7 @@ export async function GET() {
   try {
     await requirePermission(PERMISSIONS.CONFIGURE_INTEGRATIONS);
 
-    const [jobs, signalGroups] = await Promise.all([
+    const [jobs, signalGroups, settings] = await Promise.all([
       prisma.syncJob.findMany({
         orderBy: { createdAt: "desc" },
         select: {
@@ -45,13 +49,20 @@ export async function GET() {
         by: ["source"],
         _count: { _all: true },
       }),
+      listIntegrationSettings(),
     ]);
 
+    const settingsBySource = new Map<string, typeof settings>();
     const latestJobBySource = new Map<string, (typeof jobs)[number]>();
     for (const job of jobs) {
       if (!latestJobBySource.has(job.source)) {
         latestJobBySource.set(job.source, job);
       }
+    }
+    for (const setting of settings) {
+      const current = settingsBySource.get(setting.source) ?? [];
+      current.push(setting);
+      settingsBySource.set(setting.source, current);
     }
 
     const signalsBySource = new Map(
@@ -60,7 +71,11 @@ export async function GET() {
 
     const integrations = Object.values(INTEGRATION_DEFINITIONS).map((definition) => {
       const latestJob = latestJobBySource.get(definition.source) ?? null;
-      const config = getConfiguredEnv(definition.requiredEnv);
+      const fieldStates = buildIntegrationFieldStates(
+        definition,
+        settingsBySource.get(definition.source) ?? []
+      );
+      const config = summarizeIntegrationFields(fieldStates);
       const status = resolveStatus({
         configuredCount: config.configuredCount,
         requiredCount: config.requiredCount,
@@ -72,6 +87,8 @@ export async function GET() {
         authType: definition.authType,
         description: definition.description,
         requiredEnv: definition.requiredEnv,
+        browserConfigurable: definition.browserConfigurable,
+        fields: fieldStates,
         missingEnv: config.missingEnv,
         configuredCount: config.configuredCount,
         requiredCount: config.requiredCount,

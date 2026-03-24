@@ -1,6 +1,7 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { getIntegrationRuntimeValues } from "@/lib/integrations/settings";
 import { logError } from "@/lib/logging";
 import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
@@ -43,13 +44,18 @@ export class PersonasAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const apiUrl = process.env.PERSONAS_API_URL;
-    const apiKey = process.env.PERSONAS_API_KEY;
+    const config = await getIntegrationRuntimeValues(this.source, [
+      "PERSONAS_API_URL",
+      "PERSONAS_API_KEY",
+    ]);
+    const apiUrl = config.PERSONAS_API_URL;
+    const apiKey = config.PERSONAS_API_KEY;
 
     const mockSignals = await resolveMockFallback({
       source: this.source,
       accountId,
       requiredEnv: ["PERSONAS_API_URL", "PERSONAS_API_KEY"],
+      resolvedValues: config,
       createMockSignals: () => this.generateMockSignals(accountId),
     });
     if (mockSignals) return mockSignals;

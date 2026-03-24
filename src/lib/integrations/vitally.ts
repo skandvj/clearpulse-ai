@@ -1,6 +1,7 @@
 import { HealthStatus } from "@prisma/client";
 import { env } from "@/env";
 import { prisma } from "@/lib/db";
+import { getIntegrationRuntimeValue } from "@/lib/integrations/settings";
 
 const VITALLY_BASE_URLS = ["https://api.vitally.io", "https://rest.vitally.io"];
 
@@ -59,7 +60,13 @@ async function vitallyRequest(
   path: string,
   body: unknown
 ): Promise<void> {
-  ensureVitallyConfigured();
+  const apiKey =
+    (await getIntegrationRuntimeValue("VITALLY", "VITALLY_API_KEY")) ??
+    env.VITALLY_API_KEY;
+
+  if (!apiKey) {
+    ensureVitallyConfigured();
+  }
 
   let fallbackError: Error | null = null;
 
@@ -67,7 +74,7 @@ async function vitallyRequest(
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${env.VITALLY_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),

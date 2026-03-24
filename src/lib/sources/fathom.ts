@@ -2,6 +2,7 @@ import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
 import { upsertFathomMeetingRecord } from "@/lib/integrations/fathom";
+import { getIntegrationRuntimeValues } from "@/lib/integrations/settings";
 import { logError } from "@/lib/logging";
 import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
@@ -32,15 +33,20 @@ export class FathomAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
+    const config = await getIntegrationRuntimeValues(this.source, [
+      "FATHOM_API_KEY",
+    ]);
+
     const mockSignals = await resolveMockFallback({
       source: this.source,
       accountId,
       requiredEnv: ["FATHOM_API_KEY"],
+      resolvedValues: config,
       createMockSignals: () => this.generateMockSignals(accountId),
     });
     if (mockSignals) return mockSignals;
 
-    const apiKey = process.env.FATHOM_API_KEY!;
+    const apiKey = config.FATHOM_API_KEY!;
 
     try {
       const account = await prisma.clientAccount.findUniqueOrThrow({

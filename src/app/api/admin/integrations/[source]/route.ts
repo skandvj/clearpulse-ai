@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import type { SignalSource } from "@prisma/client";
+import { prisma } from "@/lib/db";
 import {
   requirePermission,
   unauthorizedResponse,
@@ -11,18 +13,16 @@ import {
   INTEGRATION_DEFINITIONS,
   type IntegrationStatus,
 } from "@/lib/integrations/catalog";
-import { prisma } from "@/lib/db";
-import {
-  applyRateLimitHeaders,
-  buildRateLimitKey,
-  checkRateLimit,
-  rateLimitExceededResponse,
-} from "@/lib/rate-limit";
 import {
   buildIntegrationFieldStates,
   listIntegrationSettings,
   summarizeIntegrationFields,
+  upsertIntegrationSettings,
 } from "@/lib/integrations/settings";
+
+const updateSchema = z.object({
+  values: z.record(z.string(), z.string()).default({}),
+});
 
 function resolveStatus(args: {
   configuredCount: number;
@@ -35,7 +35,7 @@ function resolveStatus(args: {
   return "CONNECTED";
 }
 
-export async function POST(
+export async function PATCH(
   request: Request,
   { params }: { params: { source: string } }
 ) {
@@ -44,27 +44,40 @@ export async function POST(
 
     const source = params.source as SignalSource;
     const definition = INTEGRATION_DEFINITIONS[source];
-
     if (!definition) {
       return errorResponse("Unknown integration source", 404);
     }
 
-    const rateLimit = await checkRateLimit({
-      key: buildRateLimitKey({
-        request,
-        scope: "admin-integration-test",
-        userId: user.id,
-        resource: source,
-      }),
-      limit: 30,
-      windowSeconds: 10 * 60,
-    });
-    if (!rateLimit.allowed) {
-      return rateLimitExceededResponse(
-        rateLimit,
-        "Too many integration test requests for this source. Please wait a few minutes before retrying."
+    if (!definition.browserConfigurable) {
+      return errorResponse(
+        "This integration still needs environment or OAuth configuration.",
+        400
       );
     }
+
+    const parsed = updateSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return errorResponse("Invalid integration payload", 400);
+    }
+
+    await upsertIntegrationSettings({
+      source,
+      values: parsed.data.values,
+      userId: user.id,
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "INTEGRATION_UPDATED",
+        entityType: "Integration",
+        entityId: source,
+        metadata: {
+          keysUpdated: Object.keys(parsed.data.values),
+          source,
+        },
+      },
+    });
 
     const [latestJob, signalCount, settings] = await Promise.all([
       prisma.syncJob.findFirst({
@@ -90,28 +103,26 @@ export async function POST(
       latestJobStatus: latestJob?.status ?? null,
     });
 
-    const message =
-      status === "CONNECTED"
-        ? "Configuration looks complete and ready for sync."
-        : status === "ERROR"
-          ? latestJob?.error || "Configuration is present, but the most recent sync failed."
-          : `Missing configuration keys: ${config.missingEnv.join(", ")}`;
-
-    const response = NextResponse.json({
-      ok: status === "CONNECTED",
-      source,
-      status,
-      checkedAt: new Date().toISOString(),
-      configuredCount: config.configuredCount,
-      requiredCount: config.requiredCount,
-      fields,
-      missingEnv: config.missingEnv,
-      message,
-      lastJobStatus: latestJob?.status ?? null,
-      lastSyncedAt: latestJob?.completedAt ?? latestJob?.createdAt ?? null,
-      signalsStored: signalCount,
+    return NextResponse.json({
+      message: "Integration settings saved securely.",
+      integration: {
+        source: definition.source,
+        authType: definition.authType,
+        description: definition.description,
+        requiredEnv: definition.requiredEnv,
+        browserConfigurable: definition.browserConfigurable,
+        fields,
+        missingEnv: config.missingEnv,
+        configuredCount: config.configuredCount,
+        requiredCount: config.requiredCount,
+        status,
+        lastJobStatus: latestJob?.status ?? null,
+        lastSyncedAt: latestJob?.completedAt ?? latestJob?.createdAt ?? null,
+        lastJobError: latestJob?.error ?? null,
+        lastSignalsFound: latestJob?.signalsFound ?? null,
+        signalsStored: signalCount,
+      },
     });
-    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Unauthorized") return unauthorizedResponse();
@@ -120,6 +131,6 @@ export async function POST(
       }
     }
 
-    return errorResponse("Failed to test integration");
+    return errorResponse("Failed to save integration settings");
   }
 }

@@ -7,11 +7,38 @@ export type IntegrationStatus =
   | "DISCONNECTED"
   | "ERROR";
 
+export type IntegrationFieldInputType =
+  | "text"
+  | "password"
+  | "url"
+  | "email";
+
+export type IntegrationFieldValueSource =
+  | "database"
+  | "environment"
+  | "missing";
+
+export interface IntegrationFieldState {
+  key: string;
+  label: string;
+  inputType: IntegrationFieldInputType;
+  secret: boolean;
+  browserEditable: boolean;
+  helperText?: string;
+  placeholder?: string;
+  configured: boolean;
+  source: IntegrationFieldValueSource;
+  value: string | null;
+  valuePreview: string | null;
+}
+
 export interface IntegrationStatusCard {
   source: SignalSource;
   authType: "API Key" | "OAuth" | "Hybrid";
   description: string;
   requiredEnv: string[];
+  browserConfigurable: boolean;
+  fields: IntegrationFieldState[];
   missingEnv: string[];
   configuredCount: number;
   requiredCount: number;
@@ -41,11 +68,17 @@ export interface IntegrationTestResponse {
   checkedAt: string;
   configuredCount: number;
   requiredCount: number;
+  fields: IntegrationFieldState[];
   missingEnv: string[];
   message: string;
   lastJobStatus: string | null;
   lastSyncedAt: string | null;
   signalsStored: number;
+}
+
+export interface IntegrationUpdateResponse {
+  message: string;
+  integration: IntegrationStatusCard;
 }
 
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
@@ -71,6 +104,28 @@ export function useTestIntegration() {
     mutationFn: (source) =>
       fetchJSON<IntegrationTestResponse>(`/api/admin/integrations/${source}/test`, {
         method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["integration-statuses"] });
+    },
+  });
+}
+
+export function useUpdateIntegration() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    IntegrationUpdateResponse,
+    Error,
+    { source: SignalSource; values: Record<string, string> }
+  >({
+    mutationFn: ({ source, values }) =>
+      fetchJSON<IntegrationUpdateResponse>(`/api/admin/integrations/${source}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ values }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integration-statuses"] });

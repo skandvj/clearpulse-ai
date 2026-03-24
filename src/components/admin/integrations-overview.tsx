@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, PlugZap, RefreshCw, SearchX } from "lucide-react";
-import { useIntegrationStatuses, useTestIntegration } from "@/lib/hooks/use-integrations";
+import {
+  useIntegrationStatuses,
+  useTestIntegration,
+  useUpdateIntegration,
+  type IntegrationFieldState,
+  type IntegrationStatusCard,
+} from "@/lib/hooks/use-integrations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SourceBadge, type SignalSource } from "@/components/ui/source-badge";
 
 function formatDateTime(value: string | null): string {
@@ -54,10 +62,186 @@ function StatusBadge({
   );
 }
 
+function fieldSourceLabel(field: IntegrationFieldState): string {
+  if (field.source === "database") return "Saved in ClearPulse";
+  if (field.source === "environment") return "Provided by environment";
+  return "Not configured yet";
+}
+
+function inputTypeForField(field: IntegrationFieldState): string {
+  if (field.inputType === "password") return "password";
+  if (field.inputType === "url") return "url";
+  if (field.inputType === "email") return "email";
+  return "text";
+}
+
+function IntegrationCard({
+  integration,
+  onTest,
+  onSave,
+  testing,
+  saving,
+}: {
+  integration: IntegrationStatusCard;
+  onTest: (source: SignalSource) => Promise<void>;
+  onSave: (source: SignalSource, values: Record<string, string>) => Promise<void>;
+  testing: boolean;
+  saving: boolean;
+}) {
+  const editableFields = useMemo(
+    () => integration.fields.filter((field) => field.browserEditable),
+    [integration.fields]
+  );
+
+  const [draftValues, setDraftValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setDraftValues(
+      Object.fromEntries(
+        editableFields.map((field) => [field.key, field.secret ? "" : field.value ?? ""])
+      )
+    );
+  }, [editableFields]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await onSave(integration.source, draftValues);
+  };
+
+  return (
+    <Card
+      className="rounded-2xl border-gray-100 shadow-sm transition-shadow hover:shadow-md"
+    >
+      <CardHeader className="space-y-3 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <SourceBadge source={integration.source} size="md" />
+          <StatusBadge status={integration.status} />
+        </div>
+        <CardTitle className="text-base font-semibold">
+          {integration.authType}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm leading-6 text-slate-600">
+          {integration.description}
+        </p>
+
+        <div className="grid gap-3 text-sm text-slate-600">
+          <div className="flex items-center justify-between">
+            <span>Config Coverage</span>
+            <span className="font-medium text-slate-900">
+              {integration.configuredCount}/{integration.requiredCount}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Signals Stored</span>
+            <span className="font-medium text-slate-900">
+              {integration.signalsStored}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Last Sync</span>
+            <span className="font-medium text-slate-900">
+              {formatDateTime(integration.lastSyncedAt)}
+            </span>
+          </div>
+        </div>
+
+        {integration.missingEnv.length > 0 ? (
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
+            Missing: {integration.missingEnv.join(", ")}
+          </div>
+        ) : null}
+
+        {integration.lastJobError ? (
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
+            {integration.lastJobError}
+          </div>
+        ) : null}
+
+        {integration.browserConfigurable ? (
+          <form className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4" onSubmit={handleSubmit}>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-900">
+                Browser-Managed Settings
+              </p>
+              <p className="text-xs leading-5 text-slate-600">
+                Values entered here are encrypted on the server. Secret fields stay blank after save and only show a masked preview.
+              </p>
+            </div>
+
+            {editableFields.map((field) => (
+              <div key={field.key} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor={`${integration.source}-${field.key}`}>{field.label}</Label>
+                  <span className="text-[11px] uppercase tracking-[0.14em] text-slate-500">
+                    {fieldSourceLabel(field)}
+                  </span>
+                </div>
+                <Input
+                  id={`${integration.source}-${field.key}`}
+                  type={inputTypeForField(field)}
+                  value={draftValues[field.key] ?? ""}
+                  placeholder={
+                    field.secret
+                      ? field.configured
+                        ? `Configured (${field.valuePreview ?? "hidden"})`
+                        : field.placeholder ?? "Enter securely"
+                      : field.placeholder ?? ""
+                  }
+                  onChange={(event) =>
+                    setDraftValues((current) => ({
+                      ...current,
+                      [field.key]: event.target.value,
+                    }))
+                  }
+                />
+                <p className="text-xs leading-5 text-slate-500">
+                  {field.helperText ??
+                    (field.secret
+                      ? "Leave blank to keep the currently saved secret."
+                      : "Clear the value to remove the browser-managed override and fall back to environment config.")}
+                </p>
+              </div>
+            ))}
+
+            <Button
+              type="submit"
+              className="w-full gap-2"
+              disabled={saving}
+            >
+              <PlugZap className="h-4 w-4" />
+              {saving ? "Saving…" : "Save Configuration"}
+            </Button>
+          </form>
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+            This source still relies on environment variables or an OAuth flow. Browser-managed setup is not enabled for it yet.
+          </div>
+        )}
+
+        <Button
+          variant="outline"
+          className="w-full gap-2"
+          onClick={() => onTest(integration.source)}
+          disabled={testing}
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${testing ? "animate-spin" : ""}`}
+          />
+          {testing ? "Testing…" : "Test Configuration"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function IntegrationsOverview() {
   const integrationsQuery = useIntegrationStatuses();
   const testIntegration = useTestIntegration();
+  const updateIntegration = useUpdateIntegration();
   const [testingSource, setTestingSource] = useState<SignalSource | null>(null);
+  const [savingSource, setSavingSource] = useState<SignalSource | null>(null);
 
   const handleTest = async (source: SignalSource) => {
     try {
@@ -72,6 +256,21 @@ export function IntegrationsOverview() {
       toast.error(error instanceof Error ? error.message : "Failed to test integration");
     } finally {
       setTestingSource(null);
+    }
+  };
+
+  const handleSave = async (
+    source: SignalSource,
+    values: Record<string, string>
+  ) => {
+    try {
+      setSavingSource(source);
+      const result = await updateIntegration.mutateAsync({ source, values });
+      toast.success(result.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save integration");
+    } finally {
+      setSavingSource(null);
     }
   };
 
@@ -155,72 +354,14 @@ export function IntegrationsOverview() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {integrations.map((integration) => (
-          <Card
+          <IntegrationCard
             key={integration.source}
-            className="rounded-2xl border-gray-100 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <CardHeader className="space-y-3 pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <SourceBadge source={integration.source} size="md" />
-                <StatusBadge status={integration.status} />
-              </div>
-              <CardTitle className="text-base font-semibold">
-                {integration.authType}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm leading-6 text-slate-600">
-                {integration.description}
-              </p>
-
-              <div className="grid gap-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between">
-                  <span>Config Coverage</span>
-                  <span className="font-medium text-slate-900">
-                    {integration.configuredCount}/{integration.requiredCount}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Signals Stored</span>
-                  <span className="font-medium text-slate-900">
-                    {integration.signalsStored}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Last Sync</span>
-                  <span className="font-medium text-slate-900">
-                    {formatDateTime(integration.lastSyncedAt)}
-                  </span>
-                </div>
-              </div>
-
-              {integration.missingEnv.length > 0 ? (
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
-                  Missing: {integration.missingEnv.join(", ")}
-                </div>
-              ) : null}
-
-              {integration.lastJobError ? (
-                <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
-                  {integration.lastJobError}
-                </div>
-              ) : null}
-
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => handleTest(integration.source)}
-                disabled={testingSource === integration.source}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${testingSource === integration.source ? "animate-spin" : ""}`}
-                />
-                {testingSource === integration.source
-                  ? "Testing…"
-                  : "Test Configuration"}
-              </Button>
-            </CardContent>
-          </Card>
+            integration={integration}
+            onTest={handleTest}
+            onSave={handleSave}
+            testing={testingSource === integration.source}
+            saving={savingSource === integration.source}
+          />
         ))}
       </div>
     </div>

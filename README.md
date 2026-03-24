@@ -33,6 +33,7 @@ npm install
 - Queue-backed sync requires a Redis TCP URL via `UPSTASH_REDIS_URL` or `REDIS_URL`.
 - `UPSTASH_REDIS_REST_URL` is not enough for BullMQ workers by itself.
 - Mutation route rate limiting uses `UPSTASH_REDIS_REST_URL` plus `UPSTASH_REDIS_REST_TOKEN` when available, and falls back to an in-memory limiter for local/dev runs.
+- Browser-managed integration credentials are encrypted server-side. They use `INTEGRATION_SETTINGS_ENCRYPTION_KEY` when set, and otherwise fall back to `NEXTAUTH_SECRET`.
 - The current source adapters also rely on:
   - `GOOGLE_REFRESH_TOKEN`
   - `SALESFORCE_USERNAME`

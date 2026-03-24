@@ -8,6 +8,7 @@ import {
   upsertFathomMeetingRecord,
   type FathomAttendee,
 } from "@/lib/integrations/fathom";
+import { getIntegrationRuntimeValue } from "@/lib/integrations/settings";
 import { logError, logWarn } from "@/lib/logging";
 
 function verifySignature(payload: string, signature: string | null, secret: string): boolean {
@@ -23,7 +24,10 @@ function verifySignature(payload: string, signature: string | null, secret: stri
 }
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.FATHOM_WEBHOOK_SECRET;
+  const secret = await getIntegrationRuntimeValue(
+    "FATHOM",
+    "FATHOM_WEBHOOK_SECRET"
+  );
   if (!secret) {
     logError("webhook.fathom.unconfigured", new Error("FATHOM_WEBHOOK_SECRET not configured"));
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });

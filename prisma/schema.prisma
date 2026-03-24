@@ -10,18 +10,19 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  avatarUrl String?
-  password  String?
-  role      Role      @default(CSM)
-  isActive  Boolean   @default(true)
-  lastLogin DateTime?
-  createdAt DateTime  @default(now())
-  sessions  Session[]
-  accounts  ClientAccount[]
-  auditLogs AuditLog[]
+  id                         String               @id @default(cuid())
+  email                      String               @unique
+  name                       String?
+  avatarUrl                  String?
+  password                   String?
+  role                       Role                 @default(CSM)
+  isActive                   Boolean              @default(true)
+  lastLogin                  DateTime?
+  createdAt                  DateTime             @default(now())
+  sessions                   Session[]
+  accounts                   ClientAccount[]
+  auditLogs                  AuditLog[]
+  integrationSettingsUpdated IntegrationSetting[] @relation("IntegrationSettingUpdatedBy")
 }
 
 model Session {
@@ -236,6 +237,20 @@ model AuditLog {
   entityId   String
   metadata   Json?
   createdAt  DateTime @default(now())
+}
+
+model IntegrationSetting {
+  id             String       @id @default(cuid())
+  source         SignalSource
+  key            String
+  encryptedValue String       @db.Text
+  isSecret       Boolean      @default(true)
+  updatedBy      User?        @relation("IntegrationSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([source, key])
 }
 
 model SyncJob {

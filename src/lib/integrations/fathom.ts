@@ -1,5 +1,6 @@
 import { env } from "@/env";
 import { prisma } from "@/lib/db";
+import { getIntegrationRuntimeValue } from "@/lib/integrations/settings";
 
 const FATHOM_API = "https://api.fathom.video/v1";
 
@@ -124,7 +125,11 @@ export async function findAccountForFathomAttendees(attendees: FathomAttendee[])
 export async function fetchFathomMeetingById(
   meetingId: string
 ): Promise<FathomMeetingPayload> {
-  if (!env.FATHOM_API_KEY) {
+  const apiKey =
+    (await getIntegrationRuntimeValue("FATHOM", "FATHOM_API_KEY")) ??
+    env.FATHOM_API_KEY;
+
+  if (!apiKey) {
     throw new Error("FATHOM_API_KEY is not configured");
   }
 
@@ -132,7 +137,7 @@ export async function fetchFathomMeetingById(
     `${FATHOM_API}/meetings/${encodeURIComponent(meetingId)}`,
     {
       headers: {
-        Authorization: `Bearer ${env.FATHOM_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       cache: "no-store",

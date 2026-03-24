@@ -6,6 +6,7 @@ interface MockFallbackArgs<T> {
   source: SignalSource;
   accountId: string;
   requiredEnv: string[];
+  resolvedValues?: Record<string, string | undefined>;
   createMockSignals: () => Promise<T>;
 }
 
@@ -13,10 +14,11 @@ export async function resolveMockFallback<T>({
   source,
   accountId,
   requiredEnv,
+  resolvedValues,
   createMockSignals,
 }: MockFallbackArgs<T>): Promise<T | null> {
   const missingEnv = requiredEnv.filter((envName) => {
-    const value = process.env[envName];
+    const value = resolvedValues?.[envName] ?? process.env[envName];
     return !value || value.trim().length === 0;
   });
 
@@ -26,7 +28,7 @@ export async function resolveMockFallback<T>({
 
   if (isProductionRuntime()) {
     throw new Error(
-      `[${source}] Missing required environment variables: ${missingEnv.join(", ")}`
+      `[${source}] Missing required integration settings: ${missingEnv.join(", ")}`
     );
   }
 

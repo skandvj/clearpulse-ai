@@ -1,6 +1,7 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { getIntegrationRuntimeValues } from "@/lib/integrations/settings";
 import { logError } from "@/lib/logging";
 import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
@@ -51,14 +52,20 @@ export class JiraAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const email = process.env.JIRA_EMAIL;
-    const apiToken = process.env.JIRA_API_TOKEN;
-    const baseUrl = process.env.JIRA_BASE_URL;
+    const config = await getIntegrationRuntimeValues(this.source, [
+      "JIRA_EMAIL",
+      "JIRA_API_TOKEN",
+      "JIRA_BASE_URL",
+    ]);
+    const email = config.JIRA_EMAIL;
+    const apiToken = config.JIRA_API_TOKEN;
+    const baseUrl = config.JIRA_BASE_URL;
 
     const mockSignals = await resolveMockFallback({
       source: this.source,
       accountId,
       requiredEnv: ["JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_BASE_URL"],
+      resolvedValues: config,
       createMockSignals: () => this.generateMockSignals(accountId),
     });
     if (mockSignals) return mockSignals;
