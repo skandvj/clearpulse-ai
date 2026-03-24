@@ -1,6 +1,8 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface PersonaProfile {
   id: string;
@@ -44,9 +46,13 @@ export class PersonasAdapter implements SourceAdapter {
     const apiUrl = process.env.PERSONAS_API_URL;
     const apiKey = process.env.PERSONAS_API_KEY;
 
-    if (!apiUrl || !apiKey) {
-      return this.generateMockSignals(accountId);
-    }
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: ["PERSONAS_API_URL", "PERSONAS_API_KEY"],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
 
     try {
       const account = await prisma.clientAccount.findUniqueOrThrow({
@@ -119,7 +125,11 @@ export class PersonasAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[PersonasAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "PersonasAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }

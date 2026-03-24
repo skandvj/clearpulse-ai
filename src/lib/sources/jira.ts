@@ -1,6 +1,8 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface JiraIssue {
   id: string;
@@ -53,9 +55,13 @@ export class JiraAdapter implements SourceAdapter {
     const apiToken = process.env.JIRA_API_TOKEN;
     const baseUrl = process.env.JIRA_BASE_URL;
 
-    if (!email || !apiToken || !baseUrl) {
-      return this.generateMockSignals(accountId);
-    }
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: ["JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_BASE_URL"],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
 
     try {
       const account = await prisma.clientAccount.findUniqueOrThrow({
@@ -152,7 +158,11 @@ export class JiraAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[JiraAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "JiraAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }

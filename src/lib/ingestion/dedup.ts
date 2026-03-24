@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logging";
 
 const DEFAULT_THRESHOLD = 0.95;
 
@@ -19,10 +20,10 @@ export async function isDuplicate(
 
     return results.length > 0;
   } catch (err) {
-    console.error(
-      "[ingestion/dedup] Duplicate check failed (pgvector may not be available):",
-      err
-    );
+    logError("ingestion.dedup.failed", err, {
+      accountId,
+      threshold,
+    });
     return false;
   }
 }

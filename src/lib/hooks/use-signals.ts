@@ -56,6 +56,10 @@ export interface SyncJob {
   id: string;
   source: SignalSource;
   accountId: string | null;
+  account: {
+    id: string;
+    name: string;
+  } | null;
   status: JobStatus;
   triggeredBy: string;
   startedAt: string | null;
@@ -75,16 +79,55 @@ export interface SyncJobFilters {
 }
 
 export interface SyncTriggerPayload {
-  accountId: string;
+  accountId?: string;
   source?: SignalSource;
 }
 
 interface SyncResult {
-  source: string;
+  source: SignalSource;
   totalFetched: number;
   newSignals: number;
   duplicatesSkipped: number;
   errors: string[];
+}
+
+interface QueuedSyncResult {
+  source: SignalSource;
+  accountId: string;
+  syncJobId: string;
+  queueJobId: string;
+}
+
+export type SyncTriggerResponse =
+  | {
+      target: "account" | "source";
+      source: SignalSource | null;
+      mode: "queued";
+      account?: { id: string; name: string };
+      accountCount?: number;
+      jobs: QueuedSyncResult[];
+    }
+  | {
+      target: "account" | "source";
+      source: SignalSource | null;
+      mode: "inline";
+      account?: { id: string; name: string };
+      accountCount?: number;
+      results: SyncResult[];
+    };
+
+export interface SyncJobsResponse {
+  jobs: SyncJob[];
+  total: number;
+  page: number;
+  pageSize: number;
+  queueMode: "queued" | "inline";
+  summary: {
+    pending: number;
+    running: number;
+    completed: number;
+    failed: number;
+  };
 }
 
 function buildQueryString(params: Record<string, string | undefined>): string {
@@ -130,8 +173,11 @@ export function useSignals(accountId: string, filters: SignalFilters = {}) {
   });
 }
 
-export function useSyncJobs(filters: SyncJobFilters = {}) {
-  return useQuery<{ jobs: SyncJob[]; total: number; page: number; pageSize: number }>({
+export function useSyncJobs(
+  filters: SyncJobFilters = {},
+  options?: { refetchInterval?: number }
+) {
+  return useQuery<SyncJobsResponse>({
     queryKey: ["syncJobs", filters],
     queryFn: () =>
       fetchJSON(
@@ -143,12 +189,13 @@ export function useSyncJobs(filters: SyncJobFilters = {}) {
           pageSize: filters.pageSize?.toString(),
         })}`
       ),
+    refetchInterval: options?.refetchInterval,
   });
 }
 
 export function useTriggerSync() {
   const queryClient = useQueryClient();
-  return useMutation<{ results: SyncResult[] }, Error, SyncTriggerPayload>({
+  return useMutation<SyncTriggerResponse, Error, SyncTriggerPayload>({
     mutationFn: (payload) =>
       fetchJSON("/api/sync", {
         method: "POST",
@@ -156,9 +203,11 @@ export function useTriggerSync() {
         body: JSON.stringify(payload),
       }),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["signals", variables.accountId],
-      });
+      if (variables.accountId) {
+        queryClient.invalidateQueries({
+          queryKey: ["signals", variables.accountId],
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["syncJobs"] });
     },
   });

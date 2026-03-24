@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker:ingestion": "tsx src/lib/ingestion/worker-entry.ts",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

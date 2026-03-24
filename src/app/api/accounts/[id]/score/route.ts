@@ -9,6 +9,13 @@ import {
 } from "@/lib/auth-helpers";
 import { PERMISSIONS } from "@/lib/rbac";
 import { runAccountHealthScoring } from "@/lib/ai/scoreKPIHealth";
+import { logError } from "@/lib/logging";
+import {
+  applyRateLimitHeaders,
+  buildRateLimitKey,
+  checkRateLimit,
+  rateLimitExceededResponse,
+} from "@/lib/rate-limit";
 
 export async function POST(
   _request: NextRequest,
@@ -28,8 +35,26 @@ export async function POST(
 
     await requireAccountAccess(account.csmId);
 
+    const rateLimit = await checkRateLimit({
+      key: buildRateLimitKey({
+        request: _request,
+        scope: "account-score",
+        userId: user.id,
+        resource: params.id,
+      }),
+      limit: 30,
+      windowSeconds: 10 * 60,
+    });
+    if (!rateLimit.allowed) {
+      return rateLimitExceededResponse(
+        rateLimit,
+        "Too many health re-score requests for this account. Please wait a few minutes before retrying."
+      );
+    }
+
     const summary = await runAccountHealthScoring(params.id, user.id);
-    return NextResponse.json(summary);
+    const response = NextResponse.json(summary);
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Unauthorized") return unauthorizedResponse();
@@ -41,7 +66,9 @@ export async function POST(
       }
     }
 
-    console.error("[api/score]", error);
+    logError("api.score.failed", error, {
+      accountId: params.id,
+    });
     return errorResponse(
       error instanceof Error ? error.message : "Health scoring failed"
     );

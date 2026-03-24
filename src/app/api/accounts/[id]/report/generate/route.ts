@@ -12,6 +12,12 @@ import { runAccountHealthScoring } from "@/lib/ai/scoreKPIHealth";
 import { renderAccountReportToBuffer } from "@/lib/report/generateReport";
 import { loadAccountReportData } from "@/lib/report/load-account-report-data";
 import { uploadReportPdfToSupabase } from "@/lib/report/storage";
+import {
+  applyRateLimitHeaders,
+  buildRateLimitKey,
+  checkRateLimit,
+  rateLimitExceededResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -50,6 +56,23 @@ export async function POST(
     }
 
     await requireAccountAccess(account.csmId);
+
+    const rateLimit = await checkRateLimit({
+      key: buildRateLimitKey({
+        request: _request,
+        scope: "account-report-generate",
+        userId: user.id,
+        resource: params.id,
+      }),
+      limit: 10,
+      windowSeconds: 60 * 60,
+    });
+    if (!rateLimit.allowed) {
+      return rateLimitExceededResponse(
+        rateLimit,
+        "Too many report generation requests for this account. Please wait before generating another PDF."
+      );
+    }
 
     let reportData = await loadAccountReportData(
       params.id,
@@ -132,7 +155,7 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       signedUrl: storedFile.signedUrl,
       fileName,
       snapshotId: snapshot.id,
@@ -141,6 +164,7 @@ export async function POST(
       scoringRefreshed,
       warning,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Unauthorized") return unauthorizedResponse();

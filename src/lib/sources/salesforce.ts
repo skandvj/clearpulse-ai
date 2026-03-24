@@ -1,6 +1,8 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { logError, logWarn } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface SalesforceTokenResponse {
   access_token: string;
@@ -65,8 +67,21 @@ export class SalesforceAdapter implements SourceAdapter {
     const username = process.env.SALESFORCE_USERNAME;
     const password = process.env.SALESFORCE_PASSWORD;
 
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: [
+        "SALESFORCE_CLIENT_ID",
+        "SALESFORCE_CLIENT_SECRET",
+        "SALESFORCE_INSTANCE_URL",
+      ],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
     if (!clientId || !clientSecret || !instanceUrl) {
-      return this.generateMockSignals(accountId);
+      throw new Error(
+        "Salesforce adapter is missing required credentials after fallback resolution.",
+      );
     }
 
     try {
@@ -75,9 +90,10 @@ export class SalesforceAdapter implements SourceAdapter {
       });
 
       if (!account.salesforceId) {
-        console.warn(
-          `[SalesforceAdapter] No Salesforce ID for ${account.name}`,
-        );
+        logWarn("adapter.salesforce.missing_account_id", {
+          accountId,
+          accountName: account.name,
+        });
         return [];
       }
 
@@ -166,7 +182,11 @@ export class SalesforceAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[SalesforceAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "SalesforceAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }

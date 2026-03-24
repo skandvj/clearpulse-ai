@@ -3,19 +3,18 @@ import { SignalSource } from "@prisma/client";
 import { getRedisConnectionOptions, isQueueAvailable } from "./redis";
 import { processIngestionJob } from "./service";
 import { QUEUE_NAME, type IngestSourceJobData } from "./queue";
+import { logError, logInfo, logWarn } from "@/lib/logging";
 
 let worker: Worker | null = null;
 
 export function startWorker(): void {
   if (!isQueueAvailable()) {
-    console.warn(
-      "[ingestion/worker] Redis unavailable — worker not started"
-    );
+    logWarn("ingestion.worker.unavailable", {});
     return;
   }
 
   if (worker) {
-    console.warn("[ingestion/worker] Worker already running");
+    logWarn("ingestion.worker.already_running", {});
     return;
   }
 
@@ -30,29 +29,39 @@ export function startWorker(): void {
   worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { source, accountId, triggeredBy, since } =
+      const { source, accountId, triggeredBy, since, syncJobId } =
         job.data as IngestSourceJobData;
 
-      console.log(
-        `[ingestion/worker] Processing job ${job.id}: ${source} for account ${accountId}`
-      );
+      logInfo("ingestion.worker.job_started", {
+        queueJobId: String(job.id),
+        source,
+        accountId,
+      });
 
       const result = await processIngestionJob(
         source as SignalSource,
         accountId,
         triggeredBy,
-        since ? new Date(since) : undefined
+        since ? new Date(since) : undefined,
+        typeof syncJobId === "string" ? syncJobId : undefined
       );
 
-      console.log(
-        `[ingestion/worker] Job ${job.id} completed: ${result.newSignals} new signals, ${result.duplicatesSkipped} duplicates skipped`
-      );
+      logInfo("ingestion.worker.job_completed", {
+        queueJobId: String(job.id),
+        source,
+        accountId,
+        newSignals: result.newSignals,
+        duplicatesSkipped: result.duplicatesSkipped,
+        errorCount: result.errors.length,
+      });
 
       if (result.errors.length > 0) {
-        console.warn(
-          `[ingestion/worker] Job ${job.id} had ${result.errors.length} errors:`,
-          result.errors
-        );
+        logWarn("ingestion.worker.job_partial_errors", {
+          queueJobId: String(job.id),
+          source,
+          accountId,
+          errors: result.errors,
+        });
       }
 
       return result;
@@ -64,15 +73,14 @@ export function startWorker(): void {
   );
 
   worker.on("failed", (job, err) => {
-    console.error(
-      `[ingestion/worker] Job ${job?.id} failed:`,
-      err.message
-    );
+    logError("ingestion.worker.job_failed", err, {
+      queueJobId: job?.id ? String(job.id) : null,
+    });
   });
 
   worker.on("error", (err) => {
-    console.error("[ingestion/worker] Worker error:", err);
+    logError("ingestion.worker.error", err);
   });
 
-  console.log("[ingestion/worker] Worker started");
+  logInfo("ingestion.worker.started", {});
 }

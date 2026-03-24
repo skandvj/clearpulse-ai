@@ -1,6 +1,8 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { logError, logWarn } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface GoogleDriveFile {
   id: string;
@@ -40,8 +42,21 @@ export class GDriveAdapter implements SourceAdapter {
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
     const rootFolderId = process.env.GDRIVE_CUSTOMERS_FOLDER_ID;
 
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: [
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REFRESH_TOKEN",
+      ],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
     if (!clientId || !clientSecret || !refreshToken) {
-      return this.generateMockSignals(accountId);
+      throw new Error(
+        "Google Drive adapter is missing Google credentials after fallback resolution.",
+      );
     }
 
     try {
@@ -65,9 +80,11 @@ export class GDriveAdapter implements SourceAdapter {
       );
 
       if (!accountFolderId) {
-        console.warn(
-          `[GDriveAdapter] No Google Drive folder found for ${account.name}`,
-        );
+        logWarn("adapter.gdrive.folder_not_found", {
+          accountId,
+          accountName: account.name,
+          rootFolderConfigured: Boolean(rootFolderId),
+        });
         return [];
       }
 
@@ -118,7 +135,11 @@ export class GDriveAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[GDriveAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "GDriveAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }

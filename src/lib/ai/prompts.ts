@@ -8,9 +8,11 @@ Rules:
   - currentValue (string or null)
   - unit (string or null, e.g. "%", "tickets", "USD")
   - category: one of DEFLECTION, EFFICIENCY, ADOPTION, REVENUE, SATISFACTION, RETENTION, CUSTOM
+  - approximateTimestamp (integer seconds or null, only when a meeting/video moment is clearly implied by the evidence)
   - evidence: array of { "signalId": "<exact id from input>", "excerpt": "<short quote supporting this KPI>", "relevance": <number 0-1> }
 - Every KPI must cite at least one evidence item with a valid signalId from the provided signals.
 - Merge duplicate concepts in your output: one row per distinct metric; strongest evidence only.
+- If the KPI is supported by meeting transcript or meeting-summary evidence and you can infer a useful approximate moment in the conversation, return approximateTimestamp in seconds. Otherwise return null.
 - If a signal author matches a name in the HIGH_PRIORITY_AUTHORS list (when provided), treat their content as especially important when inferring KPIs and relevance scores (up to 1.0 for those excerpts).`;
 
 export const KPI_HEALTH_SCORING_SYSTEM = `You are a customer success health analyst scoring one KPI for one client account.

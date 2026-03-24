@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { KPICategory, KPISource, Prisma } from "@prisma/client";
+import { KPICategory, KPISource, Prisma, SignalSource } from "@prisma/client";
 import { env } from "@/env";
 import { prisma } from "@/lib/db";
 import { KPI_EXTRACTION_SYSTEM } from "./prompts";
@@ -29,6 +29,7 @@ const extractedKpiSchema = z.object({
   currentValue: z.string().nullable().optional(),
   unit: z.string().nullable().optional(),
   category: z.enum(kpiCategoryValues),
+  approximateTimestamp: z.number().min(0).nullable().optional(),
   evidence: z.array(extractedEvidenceSchema).min(1),
 });
 
@@ -41,6 +42,7 @@ export type ExtractionSummary = {
   kpisUpdated: number;
   evidenceRows: number;
   signalsMarkedProcessed: number;
+  meetingsMarkedExtracted: number;
   chunksProcessed: number;
 };
 
@@ -78,6 +80,22 @@ type SignalPayload = {
   author: string | null;
   title: string | null;
   content: string;
+};
+
+type SignalContext = {
+  id: string;
+  source: SignalSource;
+  externalId: string | null;
+  url: string | null;
+  signalDate: Date;
+};
+
+type MeetingContext = {
+  id: string;
+  fathomId: string | null;
+  recordingUrl: string | null;
+  meetingDate: Date;
+  duration: number | null;
 };
 
 function buildSignalPayloads(
@@ -123,6 +141,73 @@ function chunkPayloads(payloads: SignalPayload[]): SignalPayload[][] {
   }
   if (current.length) chunks.push(current);
   return chunks;
+}
+
+function parseFathomSignalId(externalId: string | null): string | null {
+  if (!externalId?.startsWith("fathom-")) {
+    return null;
+  }
+
+  const value = externalId.slice("fathom-".length).trim();
+  return value || null;
+}
+
+function resolveMeetingForSignal(
+  signal: SignalContext,
+  meetingsByFathomId: Map<string, MeetingContext>,
+  meetingsByRecordingUrl: Map<string, MeetingContext>,
+  meetings: MeetingContext[]
+): MeetingContext | null {
+  if (signal.source !== SignalSource.FATHOM) {
+    return null;
+  }
+
+  const fathomId = parseFathomSignalId(signal.externalId);
+  if (fathomId) {
+    return meetingsByFathomId.get(fathomId) ?? null;
+  }
+
+  if (signal.url) {
+    const byUrl = meetingsByRecordingUrl.get(signal.url);
+    if (byUrl) {
+      return byUrl;
+    }
+  }
+
+  return (
+    meetings.find(
+      (meeting) =>
+        Math.abs(meeting.meetingDate.getTime() - signal.signalDate.getTime()) <=
+        6 * 60 * 60 * 1000
+    ) ?? null
+  );
+}
+
+function normalizeVideoTimestamp(
+  value: number | null | undefined,
+  durationMinutes: number | null
+): number | null {
+  if (value == null || !Number.isFinite(value)) {
+    return null;
+  }
+
+  const rounded = Math.max(0, Math.round(value));
+  if (durationMinutes == null || durationMinutes <= 0) {
+    return rounded;
+  }
+
+  return Math.min(rounded, durationMinutes * 60);
+}
+
+function buildVideoClipUrl(
+  recordingUrl: string | null,
+  timestamp: number | null
+): string | null {
+  if (!recordingUrl) {
+    return null;
+  }
+
+  return timestamp == null ? recordingUrl : `${recordingUrl}#t=${timestamp}`;
 }
 
 async function callExtraction(
@@ -186,7 +271,11 @@ function mergeExtracted(
 
       const existing = map.get(key);
       if (!existing) {
-        map.set(key, { ...kpi, metricName: kpi.metricName.trim() });
+        map.set(key, {
+          ...kpi,
+          metricName: kpi.metricName.trim(),
+          approximateTimestamp: kpi.approximateTimestamp ?? null,
+        });
         continue;
       }
 
@@ -204,6 +293,8 @@ function mergeExtracted(
         currentValue: kpi.currentValue ?? existing.currentValue ?? null,
         unit: kpi.unit ?? existing.unit ?? null,
         category: kpi.category,
+        approximateTimestamp:
+          existing.approximateTimestamp ?? kpi.approximateTimestamp ?? null,
         evidence: Array.from(evidenceBySignal.values()).sort(
           (a, b) => b.relevance - a.relevance
         ),
@@ -220,7 +311,7 @@ export async function runKpiExtraction(
 ): Promise<ExtractionSummary> {
   const client = getAnthropicClient();
 
-  const [signals, contacts] = await Promise.all([
+  const [signals, contacts, meetings] = await Promise.all([
     prisma.rawSignal.findMany({
       where: { accountId },
       orderBy: { signalDate: "desc" },
@@ -229,14 +320,26 @@ export async function runKpiExtraction(
         id: true,
         source: true,
         signalDate: true,
+        externalId: true,
         author: true,
         title: true,
         content: true,
+        url: true,
       },
     }),
     prisma.contact.findMany({
       where: { accountId },
       select: { name: true },
+    }),
+    prisma.meeting.findMany({
+      where: { accountId },
+      select: {
+        id: true,
+        fathomId: true,
+        recordingUrl: true,
+        meetingDate: true,
+        duration: true,
+      },
     }),
   ]);
 
@@ -246,6 +349,7 @@ export async function runKpiExtraction(
       kpisUpdated: 0,
       evidenceRows: 0,
       signalsMarkedProcessed: 0,
+      meetingsMarkedExtracted: 0,
       chunksProcessed: 0,
     };
   }
@@ -256,6 +360,28 @@ export async function runKpiExtraction(
 
   const payloads = buildSignalPayloads(signals);
   const chunks = chunkPayloads(payloads);
+  const signalContextById = new Map<string, SignalContext>(
+    signals.map((signal) => [
+      signal.id,
+      {
+        id: signal.id,
+        source: signal.source,
+        externalId: signal.externalId ?? null,
+        url: signal.url ?? null,
+        signalDate: signal.signalDate,
+      },
+    ])
+  );
+  const meetingsByFathomId = new Map<string, MeetingContext>(
+    meetings
+      .filter((meeting) => !!meeting.fathomId)
+      .map((meeting) => [meeting.fathomId as string, meeting])
+  );
+  const meetingsByRecordingUrl = new Map<string, MeetingContext>(
+    meetings
+      .filter((meeting) => !!meeting.recordingUrl)
+      .map((meeting) => [meeting.recordingUrl as string, meeting])
+  );
 
   const batchResults: z.infer<typeof extractedKpiSchema>[][] = [];
   for (const chunk of chunks) {
@@ -291,6 +417,7 @@ export async function runKpiExtraction(
       kpisUpdated: 0,
       evidenceRows: 0,
       signalsMarkedProcessed: 0,
+      meetingsMarkedExtracted: 0,
       chunksProcessed: chunks.length,
     };
   }
@@ -299,6 +426,7 @@ export async function runKpiExtraction(
   let kpisUpdated = 0;
   let evidenceRows = 0;
   const signalIdsToMark = new Set<string>();
+  const meetingIdsToMark = new Set<string>();
 
   await prisma.$transaction(async (tx) => {
     for (const kpi of toProcess) {
@@ -310,6 +438,44 @@ export async function runKpiExtraction(
       }
 
       let kpiId: string;
+      const primaryMeeting =
+        [...kpi.evidence]
+          .sort((a, b) => b.relevance - a.relevance)
+          .map((evidence) => signalContextById.get(evidence.signalId))
+          .filter((signal): signal is SignalContext => !!signal)
+          .map((signal) =>
+            resolveMeetingForSignal(
+              signal,
+              meetingsByFathomId,
+              meetingsByRecordingUrl,
+              meetings
+            )
+          )
+          .find((meeting): meeting is MeetingContext => !!meeting) ?? null;
+      const matchedMeetingIds = new Set(
+        kpi.evidence
+          .map((evidence) => signalContextById.get(evidence.signalId))
+          .filter((signal): signal is SignalContext => !!signal)
+          .map((signal) =>
+            resolveMeetingForSignal(
+              signal,
+              meetingsByFathomId,
+              meetingsByRecordingUrl,
+              meetings
+            )
+          )
+          .filter((meeting): meeting is MeetingContext => !!meeting)
+          .map((meeting) => meeting.id)
+      );
+      const videoTimestamp = primaryMeeting
+        ? normalizeVideoTimestamp(
+            kpi.approximateTimestamp,
+            primaryMeeting.duration
+          )
+        : null;
+      const videoClipUrl = primaryMeeting
+        ? buildVideoClipUrl(primaryMeeting.recordingUrl, videoTimestamp)
+        : null;
 
       if (match) {
         kpisUpdated++;
@@ -324,6 +490,8 @@ export async function runKpiExtraction(
             category: kpi.category as KPICategory,
             source: KPISource.AI_EXTRACTED,
             status: "ON_TRACK",
+            ...(videoTimestamp != null ? { videoTimestamp } : {}),
+            ...(videoClipUrl ? { videoClipUrl } : {}),
           },
         });
 
@@ -352,6 +520,8 @@ export async function runKpiExtraction(
             category: kpi.category as KPICategory,
             source: KPISource.AI_EXTRACTED,
             status: "ON_TRACK",
+            ...(videoTimestamp != null ? { videoTimestamp } : {}),
+            ...(videoClipUrl ? { videoClipUrl } : {}),
           },
         });
         kpiId = created.id;
@@ -373,6 +543,10 @@ export async function runKpiExtraction(
           });
         }
       }
+
+      matchedMeetingIds.forEach((meetingId) => {
+        meetingIdsToMark.add(meetingId);
+      });
 
       for (const ev of kpi.evidence) {
         await tx.kPIEvidence.upsert({
@@ -402,6 +576,13 @@ export async function runKpiExtraction(
       });
     }
 
+    if (meetingIdsToMark.size > 0) {
+      await tx.meeting.updateMany({
+        where: { id: { in: Array.from(meetingIdsToMark) } },
+        data: { extractedKPIs: true },
+      });
+    }
+
     if (kpisCreated > 0 || kpisUpdated > 0 || evidenceRows > 0) {
       await tx.auditLog.create({
         data: {
@@ -414,6 +595,7 @@ export async function runKpiExtraction(
             kpisUpdated,
             evidenceRows,
             signalsMarkedProcessed: signalIdsToMark.size,
+            meetingsMarkedExtracted: meetingIdsToMark.size,
           } as Prisma.InputJsonValue,
         },
       });
@@ -425,6 +607,7 @@ export async function runKpiExtraction(
     kpisUpdated,
     evidenceRows,
     signalsMarkedProcessed: signalIdsToMark.size,
+    meetingsMarkedExtracted: meetingIdsToMark.size,
     chunksProcessed: chunks.length,
   };
 }

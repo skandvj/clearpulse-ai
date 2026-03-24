@@ -1,6 +1,9 @@
 import { Queue } from "bullmq";
 import { SignalSource } from "@prisma/client";
 import { getRedisConnectionOptions } from "./redis";
+import { prisma } from "@/lib/db";
+import type { IngestionResult } from "./types";
+import { logWarn } from "@/lib/logging";
 
 const QUEUE_NAME = "signal-ingestion";
 
@@ -9,7 +12,30 @@ export interface IngestSourceJobData {
   accountId: string;
   since?: string;
   triggeredBy: string;
+  syncJobId?: string;
 }
+
+export interface QueuedSyncReference {
+  source: SignalSource;
+  accountId: string;
+  syncJobId: string;
+  queueJobId: string;
+}
+
+export interface InlineSyncReference extends IngestionResult {
+  source: SignalSource;
+  accountId: string;
+}
+
+export type SyncDispatchResult =
+  | {
+      mode: "queued";
+      jobs: QueuedSyncReference[];
+    }
+  | {
+      mode: "inline";
+      results: InlineSyncReference[];
+    };
 
 let queue: Queue | null = null;
 
@@ -35,30 +61,56 @@ export async function enqueueIngestion(
   accountId: string,
   triggeredBy: string,
   since?: Date
-): Promise<void> {
+): Promise<SyncDispatchResult> {
   const q = getQueue();
 
   if (q) {
+    const syncJob = await prisma.syncJob.create({
+      data: {
+        source,
+        accountId,
+        triggeredBy,
+        status: "PENDING",
+      },
+      select: { id: true },
+    });
     const data: IngestSourceJobData = {
       source,
       accountId,
       triggeredBy,
+      syncJobId: syncJob.id,
       since: since?.toISOString(),
     };
-    await q.add("ingest-source", data, {
+    const job = await q.add("ingest-source", data, {
       attempts: 3,
       backoff: { type: "exponential", delay: 5000 },
       removeOnComplete: 100,
       removeOnFail: 200,
     });
-    return;
+    return {
+      mode: "queued",
+      jobs: [
+        {
+          source,
+          accountId,
+          syncJobId: syncJob.id,
+          queueJobId: String(job.id),
+        },
+      ],
+    };
   }
 
-  console.warn(
-    "[ingestion/queue] Queue unavailable — running ingestion synchronously"
-  );
+  logWarn("ingestion.queue.inline_fallback", {
+    source,
+    accountId,
+    triggeredBy,
+  });
   const { processIngestionJob } = await import("./service");
-  await processIngestionJob(source, accountId, triggeredBy, since);
+  const result = await processIngestionJob(source, accountId, triggeredBy, since);
+  return {
+    mode: "inline",
+    results: [{ source, accountId, ...result }],
+  };
 }
 
 const ALL_SOURCES: SignalSource[] = [
@@ -77,16 +129,31 @@ export async function enqueueBulkSync(
   accountId: string,
   triggeredBy: string,
   since?: Date
-): Promise<void> {
+): Promise<SyncDispatchResult> {
   const q = getQueue();
 
   if (q) {
-    const jobs = ALL_SOURCES.map((source) => ({
+    const syncJobs = await prisma.$transaction(
+      ALL_SOURCES.map((source) =>
+        prisma.syncJob.create({
+          data: {
+            source,
+            accountId,
+            triggeredBy,
+            status: "PENDING",
+          },
+          select: { id: true, source: true, accountId: true },
+        })
+      )
+    );
+
+    const jobs = syncJobs.map((syncJob) => ({
       name: "ingest-source",
       data: {
-        source,
-        accountId,
+        source: syncJob.source,
+        accountId: syncJob.accountId!,
         triggeredBy,
+        syncJobId: syncJob.id,
         since: since?.toISOString(),
       } as Record<string, unknown>,
       opts: {
@@ -96,17 +163,33 @@ export async function enqueueBulkSync(
         removeOnFail: 200,
       },
     }));
-    await q.addBulk(jobs);
-    return;
+    const queued = await q.addBulk(jobs);
+    return {
+      mode: "queued",
+      jobs: queued.map((job, index) => ({
+        source: syncJobs[index].source,
+        accountId: syncJobs[index].accountId!,
+        syncJobId: syncJobs[index].id,
+        queueJobId: String(job.id),
+      })),
+    };
   }
 
-  console.warn(
-    "[ingestion/queue] Queue unavailable — running bulk sync synchronously"
-  );
+  logWarn("ingestion.queue.bulk_inline_fallback", {
+    accountId,
+    triggeredBy,
+    sourceCount: ALL_SOURCES.length,
+  });
   const { processIngestionJob } = await import("./service");
+  const results: InlineSyncReference[] = [];
   for (const source of ALL_SOURCES) {
-    await processIngestionJob(source, accountId, triggeredBy, since);
+    const result = await processIngestionJob(source, accountId, triggeredBy, since);
+    results.push({ source, accountId, ...result });
   }
+  return {
+    mode: "inline",
+    results,
+  };
 }
 
 export { QUEUE_NAME, getQueue };

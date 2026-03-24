@@ -1,6 +1,8 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { logError, logWarn } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface MicrosoftTokenResponse {
   access_token: string;
@@ -51,8 +53,21 @@ export class SharePointAdapter implements SourceAdapter {
     const tenantId = process.env.MICROSOFT_TENANT_ID;
     const siteId = process.env.SHAREPOINT_SITE_ID;
 
-    if (!clientId || !clientSecret || !tenantId) {
-      return this.generateMockSignals(accountId);
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: [
+        "MICROSOFT_CLIENT_ID",
+        "MICROSOFT_CLIENT_SECRET",
+        "MICROSOFT_TENANT_ID",
+      ],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
+    if (!tenantId || !clientId || !clientSecret) {
+      throw new Error(
+        "SharePoint adapter is missing Microsoft credentials after fallback resolution.",
+      );
     }
 
     try {
@@ -77,9 +92,10 @@ export class SharePointAdapter implements SourceAdapter {
       const resolvedSiteId =
         siteId || (await this.findSiteByName(headers, account.name));
       if (!resolvedSiteId) {
-        console.warn(
-          `[SharePointAdapter] Could not find SharePoint site for ${account.name}`,
-        );
+        logWarn("adapter.sharepoint.site_not_found", {
+          accountId,
+          accountName: account.name,
+        });
         return [];
       }
 
@@ -131,7 +147,11 @@ export class SharePointAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[SharePointAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "SharePointAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }

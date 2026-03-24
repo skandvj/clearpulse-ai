@@ -29,6 +29,7 @@ import {
   Trash2,
   ChevronRight,
   FileText,
+  PlayCircle,
 } from "lucide-react";
 import { useDeleteKPI } from "@/lib/hooks/use-kpis";
 import { AddKPIDialog } from "./add-kpi-dialog";
@@ -226,6 +227,26 @@ export function KPITable({
             </Badge>
           );
         },
+      },
+      {
+        id: "video",
+        header: "Video",
+        cell: ({ row }) =>
+          row.original.videoClipUrl ? (
+            <a
+              href={row.original.videoClipUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <PlayCircle className="h-3.5 w-3.5" />
+              Open
+            </a>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          ),
+        size: 72,
       },
       ...(canEdit
         ? [

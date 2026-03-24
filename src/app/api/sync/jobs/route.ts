@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { SignalSource, JobStatus, Prisma } from "@prisma/client";
+import { JobStatus, Prisma, SignalSource } from "@prisma/client";
 import {
   requirePermission,
   unauthorizedResponse,
@@ -8,6 +8,7 @@ import {
   errorResponse,
 } from "@/lib/auth-helpers";
 import { PERMISSIONS } from "@/lib/rbac";
+import { isQueueAvailable } from "@/lib/ingestion/redis";
 
 const VALID_SOURCES = new Set<string>([
   "SLACK",
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       where.status = statusParam as JobStatus;
     }
 
-    const [jobs, total] = await Promise.all([
+    const [jobs, total, grouped] = await Promise.all([
       prisma.syncJob.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -64,15 +65,74 @@ export async function GET(request: NextRequest) {
         take: pageSize,
       }),
       prisma.syncJob.count({ where }),
+      prisma.syncJob.groupBy({
+        by: ["status"],
+        where,
+        _count: { _all: true },
+      }),
     ]);
 
-    return NextResponse.json({ jobs, total, page, pageSize });
+    const summary = {
+      pending: 0,
+      running: 0,
+      completed: 0,
+      failed: 0,
+    };
+
+    for (const group of grouped) {
+      const count = group._count._all;
+      if (group.status === "PENDING") summary.pending = count;
+      if (group.status === "RUNNING") summary.running = count;
+      if (group.status === "COMPLETED") summary.completed = count;
+      if (group.status === "FAILED") summary.failed = count;
+    }
+
+    const accountIds = Array.from(
+      new Set(
+        jobs
+          .map((job) => job.accountId)
+          .filter((accountId): accountId is string => !!accountId)
+      )
+    );
+
+    const accounts =
+      accountIds.length === 0
+        ? []
+        : await prisma.clientAccount.findMany({
+            where: {
+              id: {
+                in: accountIds,
+              },
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          });
+
+    const accountById = new Map(
+      accounts.map((account) => [account.id, account] as const)
+    );
+
+    return NextResponse.json({
+      jobs: jobs.map((job) => ({
+        ...job,
+        account: job.accountId ? accountById.get(job.accountId) ?? null : null,
+      })),
+      total,
+      page,
+      pageSize,
+      queueMode: isQueueAvailable() ? "queued" : "inline",
+      summary,
+    });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Unauthorized") return unauthorizedResponse();
-      if (error.message.startsWith("Forbidden"))
+      if (error.message.startsWith("Forbidden")) {
         return forbiddenResponse(error.message);
+      }
     }
+
     return errorResponse("Failed to fetch sync jobs");
   }
 }

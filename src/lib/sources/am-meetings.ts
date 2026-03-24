@@ -1,6 +1,8 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { logError } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface GoogleCalendarEvent {
   id: string;
@@ -40,8 +42,21 @@ export class AMMeetingsAdapter implements SourceAdapter {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: [
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REFRESH_TOKEN",
+      ],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
     if (!clientId || !clientSecret || !refreshToken) {
-      return this.generateMockSignals(accountId);
+      throw new Error(
+        "AM meetings adapter is missing Google credentials after fallback resolution.",
+      );
     }
 
     try {
@@ -144,7 +159,11 @@ export class AMMeetingsAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[AMMeetingsAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "AMMeetingsAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }

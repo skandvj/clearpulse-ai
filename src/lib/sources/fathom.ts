@@ -1,6 +1,9 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { upsertFathomMeetingRecord } from "@/lib/integrations/fathom";
+import { logError } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface FathomMeeting {
   id: string;
@@ -29,10 +32,15 @@ export class FathomAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const apiKey = process.env.FATHOM_API_KEY;
-    if (!apiKey) {
-      return this.generateMockSignals(accountId);
-    }
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: ["FATHOM_API_KEY"],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
+
+    const apiKey = process.env.FATHOM_API_KEY!;
 
     try {
       const account = await prisma.clientAccount.findUniqueOrThrow({
@@ -83,6 +91,8 @@ export class FathomAdapter implements SourceAdapter {
 
           if (!isAccountMeeting) continue;
 
+          await upsertFathomMeetingRecord(account.id, meeting);
+
           const contentParts: string[] = [];
           if (meeting.summary) {
             contentParts.push(`## AI Summary\n${meeting.summary}`);
@@ -121,7 +131,11 @@ export class FathomAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[FathomAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "FathomAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }

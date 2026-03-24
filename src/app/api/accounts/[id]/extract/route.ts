@@ -10,6 +10,13 @@ import {
 import { PERMISSIONS } from "@/lib/rbac";
 import { runKpiExtraction } from "@/lib/ai/extractKPIs";
 import { runAccountHealthScoring } from "@/lib/ai/scoreKPIHealth";
+import { logError } from "@/lib/logging";
+import {
+  applyRateLimitHeaders,
+  buildRateLimitKey,
+  checkRateLimit,
+  rateLimitExceededResponse,
+} from "@/lib/rate-limit";
 
 export async function POST(
   _request: NextRequest,
@@ -29,23 +36,45 @@ export async function POST(
 
     await requireAccountAccess(account.csmId);
 
+    const rateLimit = await checkRateLimit({
+      key: buildRateLimitKey({
+        request: _request,
+        scope: "account-extract",
+        userId: user.id,
+        resource: params.id,
+      }),
+      limit: 15,
+      windowSeconds: 10 * 60,
+    });
+    if (!rateLimit.allowed) {
+      return rateLimitExceededResponse(
+        rateLimit,
+        "Too many KPI extraction requests for this account. Please wait a few minutes before retrying."
+      );
+    }
+
     const summary = await runKpiExtraction(params.id, user.id);
 
     try {
       const scoring = await runAccountHealthScoring(params.id, user.id);
-      return NextResponse.json({
+      const response = NextResponse.json({
         ...summary,
         scoring,
       });
+      return applyRateLimitHeaders(response, rateLimit);
     } catch (scoringError) {
-      console.error("[api/extract] health scoring failed after extraction", scoringError);
-      return NextResponse.json({
+      logError("api.extract.post_scoring_failed", scoringError, {
+        accountId: params.id,
+        userId: user.id,
+      });
+      const response = NextResponse.json({
         ...summary,
         scoringError:
           scoringError instanceof Error
             ? scoringError.message
             : "Health scoring failed after extraction",
       });
+      return applyRateLimitHeaders(response, rateLimit);
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -57,7 +86,9 @@ export async function POST(
         return errorResponse("AI extraction is not configured on the server", 503);
       }
     }
-    console.error("[api/extract]", error);
+    logError("api.extract.failed", error, {
+      accountId: params.id,
+    });
     return errorResponse(
       error instanceof Error ? error.message : "KPI extraction failed"
     );

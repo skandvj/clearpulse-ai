@@ -28,6 +28,15 @@ export function SyncTriggerButton({
       { accountId, source },
       {
         onSuccess: (data) => {
+          if (data.mode === "queued") {
+            toast.success(
+              source
+                ? `Queued ${data.jobs.length} ${source} sync job${data.jobs.length === 1 ? "" : "s"}`
+                : `Queued ${data.jobs.length} sync job${data.jobs.length === 1 ? "" : "s"}`
+            );
+            return;
+          }
+
           const totalNew = data.results.reduce(
             (sum, r) => sum + r.newSignals,
             0

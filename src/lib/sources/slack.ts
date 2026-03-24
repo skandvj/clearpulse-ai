@@ -1,6 +1,8 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
+import { logError, logWarn } from "@/lib/logging";
+import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
 interface SlackMessage {
   ts: string;
@@ -54,10 +56,15 @@ export class SlackAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const token = process.env.SLACK_BOT_TOKEN;
-    if (!token) {
-      return this.generateMockSignals(accountId);
-    }
+    const mockSignals = await resolveMockFallback({
+      source: this.source,
+      accountId,
+      requiredEnv: ["SLACK_BOT_TOKEN"],
+      createMockSignals: () => this.generateMockSignals(accountId),
+    });
+    if (mockSignals) return mockSignals;
+
+    const token = process.env.SLACK_BOT_TOKEN!;
 
     try {
       const account = await prisma.clientAccount.findUniqueOrThrow({
@@ -117,7 +124,11 @@ export class SlackAdapter implements SourceAdapter {
 
       return signals;
     } catch (error) {
-      console.error("[SlackAdapter] Error fetching signals:", error);
+      logError("adapter.fetch_failed", error, {
+        adapter: "SlackAdapter",
+        source: this.source,
+        accountId,
+      });
       throw error;
     }
   }
@@ -170,7 +181,10 @@ export class SlackAdapter implements SourceAdapter {
       );
       const data = (await res.json()) as SlackConversationsHistoryResponse;
       if (!data.ok) {
-        console.error("[SlackAdapter] conversations.history error:", data.error);
+        logWarn("adapter.slack.history_error", {
+          channelId,
+          error: data.error,
+        });
         break;
       }
       messages.push(...data.messages);

@@ -3,17 +3,19 @@ import { prisma } from "@/lib/db";
 import { generateEmbedding } from "./embeddings";
 import { isDuplicate } from "./dedup";
 import type { IngestionResult, SourceAdapter } from "./types";
+import { getAdapter as getRegisteredAdapter } from "@/lib/sources";
+import { logError, logInfo } from "@/lib/logging";
 
-async function getAdapter(source: SignalSource): Promise<SourceAdapter> {
-  const mod = await import(`@/lib/sources/${source.toLowerCase()}`);
-  return mod.default as SourceAdapter;
+function getAdapter(source: SignalSource): SourceAdapter {
+  return getRegisteredAdapter(source);
 }
 
 export async function processIngestionJob(
   source: SignalSource,
   accountId: string,
   triggeredBy: string,
-  since?: Date
+  since?: Date,
+  syncJobId?: string
 ): Promise<IngestionResult> {
   const result: IngestionResult = {
     totalFetched: 0,
@@ -22,22 +24,45 @@ export async function processIngestionJob(
     errors: [],
   };
 
-  const syncJob = await prisma.syncJob.create({
-    data: {
+  const syncJob = syncJobId
+    ? await prisma.syncJob.findUnique({
+        where: { id: syncJobId },
+        select: { id: true },
+      })
+    : await prisma.syncJob.create({
+        data: {
+          source,
+          accountId,
+          triggeredBy,
+          status: "PENDING",
+        },
+        select: { id: true },
+      });
+
+  if (!syncJob) {
+    throw new Error(`SyncJob ${syncJobId} was not found`);
+  }
+
+  try {
+    logInfo("ingestion.service.started", {
       source,
       accountId,
       triggeredBy,
-      status: "PENDING",
-    },
-  });
-
-  try {
-    await prisma.syncJob.update({
-      where: { id: syncJob.id },
-      data: { status: "RUNNING", startedAt: new Date() },
+      syncJobId: syncJob.id,
+      since: since?.toISOString(),
     });
 
-    const adapter = await getAdapter(source);
+    await prisma.syncJob.update({
+      where: { id: syncJob.id },
+      data: {
+        status: "RUNNING",
+        startedAt: new Date(),
+        completedAt: null,
+        error: null,
+      },
+    });
+
+    const adapter = getAdapter(source);
     const signals = await adapter.fetchSignals(accountId, since);
     result.totalFetched = signals.length;
 
@@ -103,12 +128,36 @@ export async function processIngestionJob(
         status: "COMPLETED",
         completedAt: new Date(),
         signalsFound: result.totalFetched,
+        error: null,
       },
+    });
+
+    await prisma.clientAccount.update({
+      where: { id: accountId },
+      data: { lastSyncedAt: new Date() },
+    });
+
+    logInfo("ingestion.service.completed", {
+      source,
+      accountId,
+      triggeredBy,
+      syncJobId: syncJob.id,
+      totalFetched: result.totalFetched,
+      newSignals: result.newSignals,
+      duplicatesSkipped: result.duplicatesSkipped,
+      errorCount: result.errors.length,
     });
   } catch (err) {
     const errorMsg =
       err instanceof Error ? err.message : "Unknown ingestion error";
     result.errors.push(errorMsg);
+
+    logError("ingestion.service.failed", err, {
+      source,
+      accountId,
+      triggeredBy,
+      syncJobId: syncJob.id,
+    });
 
     await prisma.syncJob
       .update({
@@ -120,7 +169,11 @@ export async function processIngestionJob(
         },
       })
       .catch((updateErr) =>
-        console.error("[ingestion/service] Failed to update SyncJob:", updateErr)
+        logError("ingestion.service.sync_job_update_failed", updateErr, {
+          source,
+          accountId,
+          syncJobId: syncJob.id,
+        })
       );
   }
 

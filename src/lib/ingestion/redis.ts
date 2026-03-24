@@ -1,3 +1,5 @@
+import { logWarn } from "@/lib/logging";
+
 let redisUrl: string | null = null;
 let initialized = false;
 
@@ -7,12 +9,20 @@ export interface RedisConnectionOptions {
 }
 
 function resolveUrl(): string | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const url =
+    process.env.UPSTASH_REDIS_URL ?? process.env.REDIS_URL ?? null;
 
   if (!url) {
-    console.warn(
-      "[ingestion/redis] UPSTASH_REDIS_REST_URL not configured — queue features disabled"
-    );
+    if (process.env.UPSTASH_REDIS_REST_URL) {
+      logWarn("ingestion.redis.rest_url_only", {
+        message:
+          "UPSTASH_REDIS_REST_URL is configured, but BullMQ requires a Redis TCP URL. Set UPSTASH_REDIS_URL or REDIS_URL to enable queue features.",
+      });
+    } else {
+      logWarn("ingestion.redis.unconfigured", {
+        message: "Redis URL not configured — queue features disabled",
+      });
+    }
     return null;
   }
 

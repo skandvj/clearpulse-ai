@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logError, logWarn } from "@/lib/logging";
 
 const MAX_TEXT_LENGTH = 8000;
 const EMBEDDING_DIM = 1536;
@@ -13,9 +14,9 @@ function getClient(): OpenAI | null {
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.warn(
-      "[ingestion/embeddings] OPENAI_API_KEY not configured — embeddings disabled"
-    );
+    logWarn("ingestion.embeddings.disabled", {
+      reason: "OPENAI_API_KEY missing",
+    });
     return null;
   }
 
@@ -46,14 +47,18 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
       if (isRateLimit && attempt < MAX_RETRIES - 1) {
         const delay = Math.pow(2, attempt) * 1000;
-        console.warn(
-          `[ingestion/embeddings] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
-        );
+        logWarn("ingestion.embeddings.rate_limited", {
+          delayMs: delay,
+          attempt: attempt + 1,
+          maxRetries: MAX_RETRIES,
+        });
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
 
-      console.error("[ingestion/embeddings] Failed to generate embedding:", err);
+      logError("ingestion.embeddings.failed", err, {
+        attempt: attempt + 1,
+      });
       return zeroVector();
     }
   }

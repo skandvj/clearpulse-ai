@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { Role } from "@prisma/client";
 import { hasPermission, Permission, canAccessAccount } from "@/lib/rbac";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 export interface AuthenticatedUser {
   id: string;
@@ -13,11 +14,27 @@ export interface AuthenticatedUser {
 export async function getServerUser(): Promise<AuthenticatedUser | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      isActive: true,
+    },
+  });
+
+  if (!currentUser || !currentUser.isActive) {
+    return null;
+  }
+
   return {
-    id: session.user.id,
-    email: session.user.email,
-    name: session.user.name,
-    role: session.user.role,
+    id: currentUser.id,
+    email: currentUser.email,
+    name: currentUser.name,
+    role: currentUser.role,
   };
 }
 

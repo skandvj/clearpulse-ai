@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -84,6 +85,8 @@ export interface Meeting {
   summaryAI: string | null;
   duration: number | null;
   meetingDate: string;
+  syncedToVitally: boolean;
+  extractedKPIs: boolean;
   participants: string[];
   createdAt: string;
 }
@@ -182,6 +185,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         kpisUpdated: number;
         evidenceRows: number;
         signalsMarkedProcessed: number;
+        meetingsMarkedExtracted: number;
         chunksProcessed: number;
         scoring?: {
           kpisScored: number;
@@ -196,18 +200,24 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["accounts", accountId] });
       const baseMessage = `KPI extraction complete: ${data.kpisCreated} created, ${data.kpisUpdated} updated`;
+      const meetingMessage =
+        data.meetingsMarkedExtracted > 0
+          ? ` Tagged ${data.meetingsMarkedExtracted} meeting${data.meetingsMarkedExtracted === 1 ? "" : "s"}.`
+          : "";
 
       if (data.scoring) {
-        toast.success(`${baseMessage}. Re-scored ${data.scoring.kpisScored} KPI(s).`);
+        toast.success(
+          `${baseMessage}.${meetingMessage} Re-scored ${data.scoring.kpisScored} KPI(s).`
+        );
         return;
       }
 
       if (data.scoringError) {
-        toast.warning(`${baseMessage}. ${data.scoringError}`);
+        toast.warning(`${baseMessage}.${meetingMessage} ${data.scoringError}`);
         return;
       }
 
-      toast.success(baseMessage);
+      toast.success(`${baseMessage}.${meetingMessage}`);
     },
     onError: (err: Error) => {
       toast.error(err.message || "KPI extraction failed");
@@ -270,6 +280,36 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
     },
     onError: (err: Error) => {
       toast.error(err.message || "Report generation failed");
+    },
+  });
+
+  const pushToVitally = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/accounts/${accountId}/vitally/push`, {
+        method: "POST",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error ?? "Vitally push failed");
+      }
+      return body as {
+        traitsPushed: number;
+        noteCreated: boolean;
+        timelineEventsCreated: number;
+        pushedAt: string;
+        warnings: string[];
+      };
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `Vitally updated: ${data.traitsPushed} KPI trait${data.traitsPushed === 1 ? "" : "s"} pushed.`
+      );
+      if (data.warnings.length > 0) {
+        toast.warning(data.warnings.join(" "));
+      }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Vitally push failed");
     },
   });
 
@@ -416,9 +456,15 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 </Button>
               )}
               {can(PERMISSIONS.PUSH_TO_VITALLY) && (
-                <Button variant="outline" size="sm" className="gap-1.5" disabled>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={pushToVitally.isPending}
+                  onClick={() => pushToVitally.mutate()}
+                >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  Push to Vitally
+                  {pushToVitally.isPending ? "Pushing…" : "Push to Vitally"}
                 </Button>
               )}
               {can(PERMISSIONS.DOWNLOAD_PDF_REPORT) && (
@@ -584,12 +630,15 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-medium text-sm">
-                      {meeting.title}
-                    </p>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {formatDate(meeting.meetingDate)}
-                    </span>
+                            <Link
+                              href={`/accounts/${accountId}/meetings/${meeting.id}`}
+                              className="truncate font-medium text-sm text-slate-900 hover:text-blue-600"
+                            >
+                              {meeting.title}
+                            </Link>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {formatDate(meeting.meetingDate)}
+                            </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
                     {meeting.duration != null && (
@@ -609,9 +658,41 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                         : meeting.summaryAI}
                     </p>
                   )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {meeting.syncedToVitally && (
+                      <Badge variant="outline" className="text-[10px]">
+                        Synced to Vitally
+                      </Badge>
+                    )}
+                    {meeting.extractedKPIs && (
+                      <Badge variant="outline" className="text-[10px]">
+                        KPIs Extracted
+                      </Badge>
+                    )}
+                    {meeting.recordingUrl && (
+                      <a
+                        href={meeting.recordingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Recording
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {account.meetings.length > 0 && (
+          <div className="mt-4 border-t pt-4">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/accounts/${accountId}/meetings`}>
+                View Full Meeting Archive
+              </Link>
+            </Button>
           </div>
         )}
       </CollapsibleSection>
