@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -132,9 +131,6 @@ function LoginForm() {
                 </div>
               </Link>
 
-              <Badge className="rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-200 hover:bg-white/10">
-                Product Preview
-              </Badge>
             </div>
 
             <div className="space-y-5">
