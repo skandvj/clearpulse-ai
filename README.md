@@ -30,6 +30,12 @@ ClearPulse helps teams:
 4. KPI health is scored with narrative context and trend data.
 5. Teams review accounts, sync updates, and generate reports from one workspace.
 
+## How To Use It
+
+If you want the operational guide for logging in, connecting APIs, configuring the webhook, and running sync/extract/score workflows, start here:
+
+- [Platform Usage and Integrations](docs/platform-usage-and-integrations.md)
+
 ## Core Product Surfaces
 
 - `/` public product landing page
@@ -131,10 +137,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 The seed script creates local users for development:
 
-- `admin@clearpulse.dev`
-- `leadership@clearpulse.dev`
-- `csm@clearpulse.dev`
-- `viewer@clearpulse.dev`
+- `admin@clearpulse.dev` / `admin123`
+- `leadership@clearpulse.dev` / `lead123`
+- `csm@clearpulse.dev` / `csm123`
+- `viewer@clearpulse.dev` / `viewer123`
 
 It also creates demo accounts so the product is usable immediately after seeding.
 
