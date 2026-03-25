@@ -3,14 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import {
-  AlertTriangle,
-  Clock3,
-  PlayCircle,
-  RefreshCw,
-  ServerCog,
-  Zap,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useAccounts } from "@/lib/hooks/use-accounts";
 import { useSyncJobs, useTriggerSync } from "@/lib/hooks/use-signals";
 import { SourceBadge, type SignalSource } from "@/components/ui/source-badge";
@@ -19,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -242,73 +234,17 @@ export function AdminSyncConsole() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Queue Mode</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {jobsQuery.data?.queueMode === "queued" ? "Queued" : "Inline"}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
-              <ServerCog className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Pending</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {jobsQuery.data?.summary.pending ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-amber-50 p-3 text-amber-600">
-              <Clock3 className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Running</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {jobsQuery.data?.summary.running ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
-              <Zap className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Failed</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {jobsQuery.data?.summary.failed ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-red-50 p-3 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="text-sm text-slate-600">
+        {jobsQuery.data?.queueMode === "queued" ? "Queued" : "Inline"} mode ·{" "}
+        {jobsQuery.data?.summary.pending ?? 0} pending ·{" "}
+        {jobsQuery.data?.summary.running ?? 0} running ·{" "}
+        {jobsQuery.data?.summary.failed ?? 0} failed
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="rounded-2xl border-gray-100 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              Per-Account Sync
-            </CardTitle>
-            <CardDescription>
-              Queue all sources for one account, or target a single source.
-            </CardDescription>
+            <CardTitle className="text-base font-semibold">Account sync</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -358,19 +294,14 @@ export function AdminSyncConsole() {
               <RefreshCw
                 className={`h-4 w-4 ${triggerSync.isPending ? "animate-spin" : ""}`}
               />
-              {triggerSync.isPending ? "Triggering…" : "Trigger Account Sync"}
+              {triggerSync.isPending ? "Starting…" : "Run sync"}
             </Button>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl border-gray-100 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              Per-Source Sweep
-            </CardTitle>
-            <CardDescription>
-              Queue one source across every accessible account.
-            </CardDescription>
+            <CardTitle className="text-base font-semibold">Source sweep</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -398,8 +329,7 @@ export function AdminSyncConsole() {
               onClick={handleSourceSweep}
               disabled={triggerSync.isPending}
             >
-              <PlayCircle className="h-4 w-4" />
-              {triggerSync.isPending ? "Triggering…" : "Run Source Sweep"}
+              {triggerSync.isPending ? "Starting…" : "Run sweep"}
             </Button>
           </CardContent>
         </Card>
@@ -407,12 +337,7 @@ export function AdminSyncConsole() {
 
       <Card className="rounded-2xl border-gray-100 shadow-sm">
         <CardHeader className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <CardTitle className="text-base font-semibold">Job Queue</CardTitle>
-            <CardDescription>
-              Auto-refreshing every 5 seconds with live sync status.
-            </CardDescription>
-          </div>
+          <CardTitle className="text-base font-semibold">Jobs</CardTitle>
 
           <div className="grid w-full gap-3 md:w-auto md:grid-cols-2">
             <Select
@@ -457,16 +382,12 @@ export function AdminSyncConsole() {
         </CardHeader>
         <CardContent>
           {jobsQuery.isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <RefreshCw className="h-10 w-10 animate-spin text-slate-300" />
-              <p className="mt-3 text-sm text-slate-500">Loading sync jobs…</p>
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+              Loading jobs…
             </div>
           ) : jobsQuery.error ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <AlertTriangle className="h-10 w-10 text-red-300" />
-              <p className="mt-3 text-sm text-slate-500">
-                {jobsQuery.error.message || "Failed to load sync jobs"}
-              </p>
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+              {jobsQuery.error.message || "Failed to load jobs"}
             </div>
           ) : jobsQuery.data && jobsQuery.data.jobs.length > 0 ? (
             <div className="space-y-4">
@@ -524,7 +445,7 @@ export function AdminSyncConsole() {
                             onClick={() => rerunJob(job)}
                             disabled={triggerSync.isPending}
                           >
-                            Re-run Failed
+                            Retry
                           </Button>
                         ) : (
                           <span className="text-sm text-slate-400">—</span>
@@ -564,16 +485,8 @@ export function AdminSyncConsole() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
-                <RefreshCw className="h-7 w-7 text-blue-600" />
-              </div>
-              <h3 className="mt-4 text-lg font-semibold text-gray-900">
-                No sync jobs yet
-              </h3>
-              <p className="mt-1 max-w-sm text-sm text-gray-500">
-                Trigger a per-account sync or source sweep to populate the queue.
-              </p>
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+              No jobs yet.
             </div>
           )}
         </CardContent>

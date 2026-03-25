@@ -238,13 +238,13 @@ function EmptyState({
       </h3>
       <p className="mt-1 max-w-sm text-sm text-gray-500">
         {hasFilters
-          ? "Try adjusting your search or filter criteria."
-          : "Add your first client account to start tracking KPIs and ingesting signals from all 9 data sources."}
+          ? "Try another search or filter."
+          : "Add your first account to get started."}
       </p>
       {!hasFilters && canAdd && (
         <Button className="mt-6 gap-2" onClick={onAddClick}>
           <Plus className="h-4 w-4" />
-          Add Your First Account
+          Add Account
         </Button>
       )}
     </div>
@@ -294,18 +294,11 @@ export default function AccountsPage() {
   return (
     <PageWrapper>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between rounded-[24px] border border-[#e3d8ca] bg-white p-7 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-              Accounts
-            </p>
-            <h1 className="mt-3 font-display text-2xl font-bold tracking-tight text-gray-900">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-gray-900">
               Accounts
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Manage client accounts with one calmer, shared view of health.
-            </p>
           </div>
           {canEdit && (
             <Button onClick={() => setDialogOpen(true)}>
@@ -314,7 +307,6 @@ export default function AccountsPage() {
           )}
         </div>
 
-        {/* Filters bar */}
         <div className="flex flex-col gap-3 rounded-[28px] border border-white/70 bg-white/72 p-4 shadow-sm sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -358,7 +350,6 @@ export default function AccountsPage() {
           </Select>
         </div>
 
-        {/* Table */}
         <Card>
           {isLoading ? (
             <TableSkeleton />
@@ -431,7 +422,6 @@ export default function AccountsPage() {
         </Card>
       </div>
 
-      {/* Add account dialog */}
       <AddAccountDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </PageWrapper>
   );

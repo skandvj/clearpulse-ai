@@ -8,6 +8,7 @@ import {
   forbiddenResponse,
   errorResponse,
 } from "@/lib/auth-helpers";
+import { isPriorityNoteAuthor } from "@/lib/priority-note-authors";
 import { PERMISSIONS } from "@/lib/rbac";
 
 const SOURCES = new Set<string>(Object.values(SignalSource));
@@ -116,9 +117,8 @@ export async function GET(
           priorityNamesList.some(
             (n) => author.includes(n) || n.includes(author)
           ));
-      const isWendy =
-        row.signal.author?.toLowerCase().includes("wendy") ?? false;
-      const isHighPriority = isContactNote || isWendy;
+      const isHighPriority =
+        isContactNote || isPriorityNoteAuthor(row.signal.author);
 
       return {
         id: row.id,

@@ -432,7 +432,7 @@ Build Phase 1 — Foundation:
 4. RBAC middleware (edge) + lib/rbac.ts with hasPermission() + usePermissions() client hook
 5. Base layout: collapsible sidebar (role-aware nav), sticky header with breadcrumbs + user dropdown, Framer Motion page transitions, Sonner toast
 6. t3-env for type-safe env vars + .env.local.example with all 30+ vars
-7. Seed script (prisma/seed.ts): 4 users (Admin, Leadership, CSM "Wendy", Viewer) + 3 demo accounts
+7. Seed script (prisma/seed.ts): 4 users (Admin, Leadership, CSM, Viewer) + 3 demo accounts
 8. Pages: /login, /dashboard (stats cards + chart placeholders), /accounts (empty state), /admin/users, /admin/integrations (9 source cards), /admin/sync, /admin/audit
 9. Custom components: <HealthRing>, <HealthStatusBadge>, <HealthTrendIndicator>, <SourceBadge> (all 9 sources), <CardSkeleton>, <TableSkeleton>, <PageSkeleton>
 
@@ -556,7 +556,7 @@ Build Phase 4 — AI Extraction Pipeline.
    - Per signal: source, date, author, excerpt, link to original
    - "Most influential" signals at top (by relevance score)
    - Filter by source and date range
-   - Wendy's notes marked [HIGH PRIORITY]
+   - Account team notes marked [HIGH PRIORITY]
 
 3. API Routes:
    - POST /api/accounts/[id]/extract — trigger KPI extraction for account
@@ -575,7 +575,7 @@ Build Phase 5 — Health Scoring Engine.
 1. Per-KPI Health Scoring (lib/ai/scoreKPIHealth.ts):
    - Call Claude with HEALTH_SYSTEM prompt for each KPI
    - Input: KPI data + all evidence signals + recent signals (last 30 days, 5 per source) + persona context
-   - Wendy's notes flagged as [HIGH PRIORITY] in prompt, weighted 1.5x
+   - Account team notes flagged as [HIGH PRIORITY] in prompt, weighted 1.5x
    - Output: healthScore (0-100), healthStatus, healthTrend, healthNarrative, keyEvidenceIds
    - JSON-only output, try/catch parse, validate with Zod
 

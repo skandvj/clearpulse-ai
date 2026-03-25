@@ -18,6 +18,8 @@ export type IntegrationFieldValueSource =
   | "environment"
   | "missing";
 
+export type AISettingKey = "ANTHROPIC_API_KEY" | "OPENAI_API_KEY";
+
 export interface IntegrationFieldState {
   key: string;
   label: string;
@@ -25,6 +27,20 @@ export interface IntegrationFieldState {
   secret: boolean;
   browserEditable: boolean;
   helperText?: string;
+  placeholder?: string;
+  configured: boolean;
+  source: IntegrationFieldValueSource;
+  value: string | null;
+  valuePreview: string | null;
+}
+
+export interface AIFieldState {
+  key: AISettingKey;
+  label: string;
+  provider: "Anthropic" | "OpenAI";
+  secret: boolean;
+  browserEditable: boolean;
+  helperText: string;
   placeholder?: string;
   configured: boolean;
   source: IntegrationFieldValueSource;
@@ -81,6 +97,20 @@ export interface IntegrationUpdateResponse {
   integration: IntegrationStatusCard;
 }
 
+export interface AISettingsResponse {
+  settings: {
+    fields: AIFieldState[];
+    configuredCount: number;
+    requiredCount: number;
+    missingKeys: AISettingKey[];
+  };
+}
+
+export interface AISettingsUpdateResponse {
+  message: string;
+  settings: AISettingsResponse["settings"];
+}
+
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
@@ -94,6 +124,13 @@ export function useIntegrationStatuses() {
   return useQuery<IntegrationsResponse>({
     queryKey: ["integration-statuses"],
     queryFn: () => fetchJSON<IntegrationsResponse>("/api/admin/integrations"),
+  });
+}
+
+export function useAISettings() {
+  return useQuery<AISettingsResponse>({
+    queryKey: ["ai-settings"],
+    queryFn: () => fetchJSON<AISettingsResponse>("/api/admin/ai-settings"),
   });
 }
 
@@ -129,6 +166,28 @@ export function useUpdateIntegration() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integration-statuses"] });
+    },
+  });
+}
+
+export function useUpdateAISettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    AISettingsUpdateResponse,
+    Error,
+    { values: Partial<Record<AISettingKey, string>> }
+  >({
+    mutationFn: ({ values }) =>
+      fetchJSON<AISettingsUpdateResponse>("/api/admin/ai-settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ values }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
     },
   });
 }

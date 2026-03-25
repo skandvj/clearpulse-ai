@@ -6,8 +6,12 @@ import {
   Prisma,
 } from "@prisma/client";
 import { z } from "zod";
-import { env } from "@/env";
 import { prisma } from "@/lib/db";
+import { getAIRuntimeValue } from "@/lib/ai/settings";
+import {
+  isPriorityNoteAuthor,
+  PRIORITY_NOTE_LABEL,
+} from "@/lib/priority-note-authors";
 import { KPI_HEALTH_SCORING_SYSTEM } from "./prompts";
 
 const MODEL = "claude-sonnet-4-20250514";
@@ -56,8 +60,8 @@ function stripJsonFence(text: string): string {
   return value.trim();
 }
 
-function getAnthropicClient(): Anthropic {
-  const key = env.ANTHROPIC_API_KEY;
+async function getAnthropicClient(): Promise<Anthropic> {
+  const key = await getAIRuntimeValue("ANTHROPIC_API_KEY");
   if (!key) {
     throw new Error("ANTHROPIC_API_KEY is not configured");
   }
@@ -87,8 +91,8 @@ function getPriorityReason(
   const normalizedAuthor = normalizePersonName(author ?? "");
   if (!normalizedAuthor) return null;
 
-  if (normalizedAuthor.includes("wendy")) {
-    return "Wendy note";
+  if (isPriorityNoteAuthor(author)) {
+    return PRIORITY_NOTE_LABEL;
   }
 
   const matchedContact = priorityNames.find((name) => {
@@ -211,7 +215,7 @@ async function scoreSingleKpi(input: {
   healthNarrative: string;
   keyEvidenceIds: string[];
 }> {
-  const client = getAnthropicClient();
+  const client = await getAnthropicClient();
   const validSignalIds = new Set([
     ...input.evidenceSignals.map((signal) => signal.id),
     ...input.recentSignals.map((signal) => signal.id),

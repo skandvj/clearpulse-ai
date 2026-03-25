@@ -37,7 +37,7 @@ Role summary:
 The normal operating flow inside ClearPulse is:
 
 1. Log in as Admin or CSM.
-2. Open `/admin/integrations` and configure the source credentials you need.
+2. Open `/admin/integrations` and configure the source credentials and AI provider keys you need.
 3. Open `/admin/sync` or an account page and trigger syncs.
 4. Review raw evidence in `/accounts/[id]/signals`.
 5. Open an account and run `Extract KPIs`.
@@ -52,10 +52,23 @@ Use:
 - `/admin/integrations` for connection status, browser-managed credentials, and config tests
 - `/admin/sync` for actual sync execution and job tracking
 
-There are two integration setup modes in the current product:
+There are three setup modes in the current product:
 
 - browser-managed configuration
 - environment/OAuth configuration
+- browser-managed AI configuration
+
+### Browser-managed AI settings
+
+These can be configured directly in `/admin/integrations` and are stored encrypted server-side:
+
+- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
+
+What they power:
+
+- Anthropic: KPI extraction and KPI health scoring
+- OpenAI: embeddings and semantic deduplication
 
 ### Browser-managed integrations
 

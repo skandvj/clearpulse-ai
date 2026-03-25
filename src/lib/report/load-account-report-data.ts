@@ -1,6 +1,7 @@
 import { HealthStatus, SignalSource } from "@prisma/client";
 import { formatTierLabel } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
+import { isPriorityNoteAuthor } from "@/lib/priority-note-authors";
 
 export interface AccountReportKpi {
   id: string;
@@ -14,7 +15,7 @@ export interface AccountReportKpi {
   updatedAt: string;
   evidenceCount: number;
   evidenceSources: SignalSource[];
-  hasWendyEvidence: boolean;
+  hasPriorityNoteEvidence: boolean;
 }
 
 export interface AccountReportContact {
@@ -52,10 +53,6 @@ export interface AccountReportData {
   };
   kpis: AccountReportKpi[];
   contacts: AccountReportContact[];
-}
-
-function includesWendy(author: string | null): boolean {
-  return (author ?? "").toLowerCase().includes("wendy");
 }
 
 function roundScore(score: number | null): number | null {
@@ -172,8 +169,8 @@ export async function loadAccountReportData(
       evidenceSources: Array.from(
         new Set(kpi.evidence.map((evidence) => evidence.signal.source))
       ) as SignalSource[],
-      hasWendyEvidence: kpi.evidence.some((evidence) =>
-        includesWendy(evidence.signal.author)
+      hasPriorityNoteEvidence: kpi.evidence.some((evidence) =>
+        isPriorityNoteAuthor(evidence.signal.author)
       ),
     })),
     contacts: account.contacts,

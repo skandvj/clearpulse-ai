@@ -352,7 +352,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Section 1 — Header */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -422,11 +421,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 </Button>
               )}
               {canTriggerSync && (
-                <Button variant="outline" size="sm" disabled>
-                  Sync Sources
-                </Button>
-              )}
-              {canTriggerSync && (
                 <Button
                   variant="default"
                   size="sm"
@@ -468,7 +462,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         </CardContent>
       </Card>
 
-      {/* Section 2 — Solution Summary */}
       <CollapsibleSection title="Solution Summary" defaultOpen>
         <InlineEditField
           value={account.currentSolution}
@@ -478,7 +471,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 3 — Current State */}
       <CollapsibleSection title="Current State" defaultOpen>
         <InlineEditField
           value={account.currentState}
@@ -488,7 +480,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 4 — Business Goals */}
       <CollapsibleSection title="Business Goals" defaultOpen>
         <InlineEditField
           value={account.businessGoals}
@@ -498,7 +489,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 5 — Objectives */}
       <CollapsibleSection title="Objectives" defaultOpen>
         <InlineEditField
           value={account.objectives}
@@ -508,7 +498,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 6 — KPIs */}
       <CollapsibleSection
         title="KPIs"
         defaultOpen
@@ -526,7 +515,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 7 — Implementation Plan */}
       <CollapsibleSection title="Implementation Plan" defaultOpen={false}>
         <InlineEditField
           value={account.implementationPlan}
@@ -536,7 +524,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 8 — Roadblocks */}
       <CollapsibleSection title="Roadblocks" defaultOpen={false}>
         <InlineEditField
           value={account.roadblocks}
@@ -546,7 +533,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 9 — Key Contacts */}
       <CollapsibleSection
         title="Key Contacts"
         defaultOpen
@@ -563,7 +549,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      {/* Section 10 — Meeting History */}
       <CollapsibleSection
         title="Meeting History"
         defaultOpen={false}
@@ -574,11 +559,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         }
       >
         {account.meetings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              No meetings recorded yet.
-            </p>
-          </div>
+          <div className="py-6 text-sm text-muted-foreground">No meetings yet.</div>
         ) : (
           <div className="space-y-3">
             {account.meetings.map((meeting) => (

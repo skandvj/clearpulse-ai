@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import { Plus, Search, ShieldCheck, UserCheck, UserX } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useUsers, useUpdateUser, type AdminUser, type UserRole } from "@/lib/hooks/use-users";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
@@ -70,15 +70,6 @@ export function UserManagement({ currentUserId }: UserManagementProps) {
   const updateUser = useUpdateUser();
 
   const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
-  const summary = useMemo(
-    () => ({
-      total: users.length,
-      active: users.filter((user) => user.isActive).length,
-      admins: users.filter((user) => user.role === "ADMIN" && user.isActive).length,
-      inactive: users.filter((user) => !user.isActive).length,
-    }),
-    [users]
-  );
 
   const handleRoleChange = async (user: AdminUser, role: UserRole) => {
     if (role === user.role) return;
@@ -124,64 +115,6 @@ export function UserManagement({ currentUserId }: UserManagementProps) {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Total Users</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {summary.total}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
-              <UserCheck className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Active</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {summary.active}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600">
-              <UserCheck className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Active Admins</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {summary.admins}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-violet-50 p-3 text-violet-600">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-sm text-slate-500">Inactive</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {summary.inactive}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-100 p-3 text-slate-600">
-              <UserX className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="rounded-2xl border-gray-100 shadow-sm">
         <CardContent className="p-0">
           {usersQuery.isLoading ? (
@@ -189,11 +122,8 @@ export function UserManagement({ currentUserId }: UserManagementProps) {
               Loading users…
             </div>
           ) : users.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <UserCheck className="mb-3 h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-500">
-                No users matched this search.
-              </p>
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+              No users match this search.
             </div>
           ) : (
             <Table>

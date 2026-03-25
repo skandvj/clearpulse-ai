@@ -9,7 +9,11 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@clearpulse.dev" },
-    update: {},
+    update: {
+      name: "Admin User",
+      role: Role.ADMIN,
+      isActive: true,
+    },
     create: {
       email: "admin@clearpulse.dev",
       name: "Admin User",
@@ -21,7 +25,11 @@ async function main() {
 
   const leadership = await prisma.user.upsert({
     where: { email: "leadership@clearpulse.dev" },
-    update: {},
+    update: {
+      name: "VP of Customer Success",
+      role: Role.LEADERSHIP,
+      isActive: true,
+    },
     create: {
       email: "leadership@clearpulse.dev",
       name: "VP of Customer Success",
@@ -33,10 +41,14 @@ async function main() {
 
   const csm = await prisma.user.upsert({
     where: { email: "csm@clearpulse.dev" },
-    update: {},
+    update: {
+      name: "Customer Success Manager",
+      role: Role.CSM,
+      isActive: true,
+    },
     create: {
       email: "csm@clearpulse.dev",
-      name: "Wendy (CSM)",
+      name: "Customer Success Manager",
       password: csmPassword,
       role: Role.CSM,
       isActive: true,
@@ -45,7 +57,11 @@ async function main() {
 
   const viewer = await prisma.user.upsert({
     where: { email: "viewer@clearpulse.dev" },
-    update: {},
+    update: {
+      name: "Read-Only Viewer",
+      role: Role.VIEWER,
+      isActive: true,
+    },
     create: {
       email: "viewer@clearpulse.dev",
       name: "Read-Only Viewer",

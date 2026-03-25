@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -115,18 +114,11 @@ export default async function DashboardPage() {
     <PageWrapper>
       <div className="space-y-6">
         <div className="rounded-[24px] border border-[#e3d8ca] bg-white p-7 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                Portfolio
-              </p>
-              <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-slate-950">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950">
                 Portfolio Dashboard
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                One clean view across {data.stats.totalAccounts} visible account
-                {data.stats.totalAccounts === 1 ? "" : "s"}.
-              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -162,15 +154,11 @@ export default async function DashboardPage() {
               <CardTitle className="text-base font-semibold">
                 Portfolio Health Map
               </CardTitle>
-              <CardDescription>
-                Accounts sorted by overall health score, with the riskiest names
-                first.
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.healthMap.length === 0 ? (
                 <div className="flex h-[300px] items-center justify-center text-sm text-gray-400">
-                  Add or sync accounts to populate portfolio health.
+                  No accounts yet.
                 </div>
               ) : (
                 <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
@@ -234,17 +222,9 @@ export default async function DashboardPage() {
               <CardTitle className="text-base font-semibold">
                 KPI Health Breakdown
               </CardTitle>
-              <CardDescription>
-                Healthy, at-risk, and critical KPI counts across your visible
-                portfolio.
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <KpiHealthBreakdownChart data={data.kpiHealthBreakdown} />
-              <div className="mt-3 text-xs text-slate-500">
-                {data.kpiUnknownCount} KPI
-                {data.kpiUnknownCount === 1 ? "" : "s"} still need scoring.
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -255,9 +235,6 @@ export default async function DashboardPage() {
               <CardTitle className="text-base font-semibold">
                 Source Signal Activity
               </CardTitle>
-              <CardDescription>
-                Signals per source across the last 14 days.
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <SourceActivityChart data={data.sourceActivity} />
@@ -269,15 +246,11 @@ export default async function DashboardPage() {
               <CardTitle className="text-base font-semibold">
                 Recent AI Extractions
               </CardTitle>
-              <CardDescription>
-                The latest AI-created KPI updates across visible accounts.
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.recentExtractions.length === 0 ? (
                 <div className="flex h-[280px] items-center justify-center text-sm text-gray-400">
-                  No AI extractions yet. Run ingestion and extraction to build
-                  the feed.
+                  No extractions yet.
                 </div>
               ) : (
                 data.recentExtractions.map((item) => (
@@ -329,9 +302,6 @@ export default async function DashboardPage() {
               <CardTitle className="text-base font-semibold">
                 Accounts Needing Attention
               </CardTitle>
-              <CardDescription>
-                Accounts with at least one critical or declining KPI.
-              </CardDescription>
             </div>
 
             <Button asChild variant="ghost" className="w-fit">
@@ -343,7 +313,7 @@ export default async function DashboardPage() {
           <CardContent>
             {data.attentionAccounts.length === 0 ? (
               <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
-                No accounts currently have critical or declining KPI signals.
+                Nothing flagged right now.
               </div>
             ) : (
               <div className="overflow-x-auto">

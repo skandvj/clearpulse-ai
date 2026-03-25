@@ -522,8 +522,10 @@ function KpiRow({ kpi }: { kpi: AccountReportKpi }) {
         <Text style={styles.sourceFootnote}>
           Evidence from {kpi.evidenceCount} source{kpi.evidenceCount === 1 ? "" : "s"}.
         </Text>
-        {kpi.hasWendyEvidence ? (
-          <Text style={styles.sourceFootnote}>Wendy&apos;s notes influenced this score.</Text>
+        {kpi.hasPriorityNoteEvidence ? (
+          <Text style={styles.sourceFootnote}>
+            Account team notes influenced this score.
+          </Text>
         ) : null}
       </View>
     </View>

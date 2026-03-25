@@ -267,7 +267,7 @@ Recommendations:
 1. Expand Analytics module training to underutilizing teams
 2. Begin scoping Phase 2 integration with their data warehouse
 3. Schedule exec sponsor dinner before renewal negotiation`,
-        author: "Wendy Okafor",
+        author: "Account Team",
       },
       {
         title: "Implementation Runbook - Phase 2.docx",

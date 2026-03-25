@@ -12,14 +12,11 @@ export default async function AdminUsersPage() {
 
   return (
     <PageWrapper>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-gray-900">
             User Management
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage user accounts, roles, and access state
-          </p>
         </div>
 
         <UserManagement currentUserId={user.id} />

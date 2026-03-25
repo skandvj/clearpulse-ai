@@ -23,6 +23,7 @@ model User {
   accounts                   ClientAccount[]
   auditLogs                  AuditLog[]
   integrationSettingsUpdated IntegrationSetting[] @relation("IntegrationSettingUpdatedBy")
+  aiSettingsUpdated          AiSetting[]          @relation("AISettingUpdatedBy")
 }
 
 model Session {
@@ -251,6 +252,17 @@ model IntegrationSetting {
   updatedAt      DateTime     @updatedAt
 
   @@unique([source, key])
+}
+
+model AiSetting {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  encryptedValue String   @db.Text
+  isSecret       Boolean  @default(true)
+  updatedBy      User?    @relation("AISettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model SyncJob {

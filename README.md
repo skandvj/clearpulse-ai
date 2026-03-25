@@ -44,7 +44,7 @@ If you want the operational guide for logging in, connecting APIs, configuring t
 - `/accounts` searchable account workspace
 - `/accounts/[id]` account overview with KPIs, evidence, contacts, and meetings
 - `/accounts/[id]/signals` raw signal browser
-- `/admin/integrations` browser-managed integration settings and config testing
+- `/admin/integrations` browser-managed source credentials, AI provider settings, and config testing
 - `/admin/sync` sync console and job visibility
 - `/admin/users` user and role management
 - `/admin/audit` operational audit trail
@@ -70,6 +70,11 @@ Browser-managed integration settings are now supported for the API-key style sou
 - Vitally
 - Jira
 - Personas
+
+AI providers can also be managed from the browser in the same admin surface:
+
+- Anthropic
+- OpenAI
 
 The remaining OAuth-heavy or hybrid sources still rely on environment configuration for now:
 
@@ -103,7 +108,7 @@ npm install
 - Queue-backed sync requires `UPSTASH_REDIS_URL` or `REDIS_URL`.
 - `UPSTASH_REDIS_REST_URL` alone is not enough for BullMQ workers.
 - Mutation route rate limiting uses `UPSTASH_REDIS_REST_URL` plus `UPSTASH_REDIS_REST_TOKEN` when available.
-- Browser-managed integration credentials are encrypted server-side. They use `INTEGRATION_SETTINGS_ENCRYPTION_KEY` when set, otherwise they fall back to `NEXTAUTH_SECRET`.
+- Browser-managed integration credentials and AI provider keys are encrypted server-side. They use `INTEGRATION_SETTINGS_ENCRYPTION_KEY` when set, otherwise they fall back to `NEXTAUTH_SECRET`.
 - Some adapters still rely on additional environment values:
   - `GOOGLE_REFRESH_TOKEN`
   - `SALESFORCE_USERNAME`

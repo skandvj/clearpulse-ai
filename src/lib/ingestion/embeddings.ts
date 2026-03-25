@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { getAIRuntimeValue } from "@/lib/ai/settings";
 import { logError, logWarn } from "@/lib/logging";
 
 const MAX_TEXT_LENGTH = 8000;
@@ -6,21 +7,32 @@ const EMBEDDING_DIM = 1536;
 const MAX_RETRIES = 3;
 
 let client: OpenAI | null = null;
-let clientChecked = false;
+let clientKey: string | null = null;
+let missingKeyLogged = false;
 
-function getClient(): OpenAI | null {
-  if (clientChecked) return client;
-  clientChecked = true;
-
-  const apiKey = process.env.OPENAI_API_KEY;
+async function getClient(): Promise<OpenAI | null> {
+  const apiKey = await getAIRuntimeValue("OPENAI_API_KEY");
   if (!apiKey) {
-    logWarn("ingestion.embeddings.disabled", {
-      reason: "OPENAI_API_KEY missing",
-    });
+    if (!missingKeyLogged) {
+      missingKeyLogged = true;
+      logWarn("ingestion.embeddings.disabled", {
+        reason: "OPENAI_API_KEY missing",
+      });
+    }
+
+    client = null;
+    clientKey = null;
     return null;
   }
 
+  missingKeyLogged = false;
+
+  if (client && clientKey === apiKey) {
+    return client;
+  }
+
   client = new OpenAI({ apiKey });
+  clientKey = apiKey;
   return client;
 }
 
@@ -29,7 +41,7 @@ function zeroVector(): number[] {
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const openai = getClient();
+  const openai = await getClient();
   if (!openai) return zeroVector();
 
   const truncated = text.slice(0, MAX_TEXT_LENGTH);

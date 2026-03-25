@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { KPICategory, KPISource, Prisma, SignalSource } from "@prisma/client";
-import { env } from "@/env";
+import { getAIRuntimeValue } from "@/lib/ai/settings";
 import { prisma } from "@/lib/db";
 import { KPI_EXTRACTION_SYSTEM } from "./prompts";
 import { z } from "zod";
@@ -62,8 +62,8 @@ function stripJsonFence(text: string): string {
   return t.trim();
 }
 
-function getAnthropicClient(): Anthropic {
-  const key = env.ANTHROPIC_API_KEY;
+async function getAnthropicClient(): Promise<Anthropic> {
+  const key = await getAIRuntimeValue("ANTHROPIC_API_KEY");
   if (!key) {
     throw new Error("ANTHROPIC_API_KEY is not configured");
   }
@@ -211,10 +211,10 @@ function buildVideoClipUrl(
 }
 
 async function callExtraction(
-  client: Anthropic,
   signals: SignalPayload[],
   highPriorityAuthors: string[]
 ): Promise<z.infer<typeof extractedKpiSchema>[]> {
+  const client = await getAnthropicClient();
   const userIntro =
     highPriorityAuthors.length > 0
       ? `HIGH_PRIORITY_AUTHORS (weight their statements heavily): ${highPriorityAuthors.join(", ")}\n\n`
@@ -309,8 +309,6 @@ export async function runKpiExtraction(
   accountId: string,
   changedByUserId: string
 ): Promise<ExtractionSummary> {
-  const client = getAnthropicClient();
-
   const [signals, contacts, meetings] = await Promise.all([
     prisma.rawSignal.findMany({
       where: { accountId },
@@ -385,7 +383,7 @@ export async function runKpiExtraction(
 
   const batchResults: z.infer<typeof extractedKpiSchema>[][] = [];
   for (const chunk of chunks) {
-    const kpis = await callExtraction(client, chunk, highPriorityAuthors);
+    const kpis = await callExtraction(chunk, highPriorityAuthors);
     batchResults.push(kpis);
   }
 

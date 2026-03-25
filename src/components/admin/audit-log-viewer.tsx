@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Download } from "lucide-react";
 import { useAuditLogs } from "@/lib/hooks/use-audit";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -80,46 +79,16 @@ export function AuditLogViewer() {
   const totalPages = logsQuery.data
     ? Math.max(1, Math.ceil(logsQuery.data.total / logsQuery.data.pageSize))
     : 1;
-  const summary = useMemo(
-    () => ({
-      total: logsQuery.data?.total ?? 0,
-      users: logsQuery.data?.filterOptions.users.length ?? 0,
-      actions: logsQuery.data?.filterOptions.actions.length ?? 0,
-    }),
-    [logsQuery.data]
-  );
+  const summary = useMemo(() => logsQuery.data?.total ?? 0, [logsQuery.data]);
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Matching Events</p>
-            <p className="mt-1 text-xl font-semibold text-slate-900">
-              {summary.total}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Actors</p>
-            <p className="mt-1 text-xl font-semibold text-slate-900">
-              {summary.users}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Actions</p>
-            <p className="mt-1 text-xl font-semibold text-slate-900">
-              {summary.actions}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="rounded-2xl border-gray-100 shadow-sm">
         <CardContent className="space-y-4 p-6">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">{summary} events</p>
+          </div>
+
           <div className="grid gap-3 lg:grid-cols-5">
             <Select
               value={userId}
@@ -222,7 +191,9 @@ export function AuditLogViewer() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{log.action}</Badge>
+                        <span className="text-sm font-medium text-slate-900">
+                          {log.action}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
@@ -273,11 +244,8 @@ export function AuditLogViewer() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Search className="mb-3 h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-500">
-                No audit entries matched your filters.
-              </p>
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+              No audit entries match these filters.
             </div>
           )}
         </CardContent>

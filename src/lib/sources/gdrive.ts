@@ -272,7 +272,7 @@ Next Steps:
 - Prepare renewal proposal with multi-year discount tiers
 - Schedule exec-to-exec dinner for April
 - Begin scoping Phase 3 (predictive analytics module)`,
-        author: "Wendy",
+        author: "Account Team",
       },
       {
         title: "QBR Prep Doc - Q1 2026",
@@ -307,7 +307,7 @@ Attendees (Customer):
 - Robert Chen, Head of Product
 - Sarah Thompson, VP Customer Success
 - David Kim, Engineering Manager`,
-        author: "Wendy",
+        author: "Account Team",
       },
       {
         title: "Success Plan Updates - H1 2026",
@@ -338,7 +338,7 @@ Goal 4: Launch self-service portal
 
 New Risk Identified:
 VP of Operations (key sponsor) has updated LinkedIn status to "Open to Work." Need contingency plan for sponsor continuity. Scheduling meeting with COO to ensure executive coverage.`,
-        author: "Wendy",
+        author: "Account Team",
       },
     ];
 
