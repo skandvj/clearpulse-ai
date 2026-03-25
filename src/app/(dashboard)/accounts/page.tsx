@@ -11,7 +11,6 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import {
-  Building2,
   Plus,
   Search,
   ArrowUpDown,
@@ -234,10 +233,7 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
-        <Building2 className="h-8 w-8 text-blue-600" />
-      </div>
-      <h3 className="mt-4 text-lg font-semibold text-gray-900">
+      <h3 className="text-lg font-semibold text-gray-900">
         {hasFilters ? "No accounts match your filters" : "No accounts yet"}
       </h3>
       <p className="mt-1 max-w-sm text-sm text-gray-500">
@@ -299,25 +295,27 @@ export default function AccountsPage() {
     <PageWrapper>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-[24px] border border-[#e3d8ca] bg-white p-7 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-gray-900">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+              Accounts
+            </p>
+            <h1 className="mt-3 font-display text-2xl font-bold tracking-tight text-gray-900">
               Accounts
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Manage client accounts and their health
+              Manage client accounts with one calmer, shared view of health.
             </p>
           </div>
           {canEdit && (
-            <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
+            <Button onClick={() => setDialogOpen(true)}>
               Add Account
             </Button>
           )}
         </div>
 
         {/* Filters bar */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 rounded-[28px] border border-white/70 bg-white/72 p-4 shadow-sm sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
@@ -361,7 +359,7 @@ export default function AccountsPage() {
         </div>
 
         {/* Table */}
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card>
           {isLoading ? (
             <TableSkeleton />
           ) : !accounts?.length ? (

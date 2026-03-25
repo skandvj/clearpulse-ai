@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, Bell, LogOut, User } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
 
 export function Header() {
@@ -28,7 +28,7 @@ export function Header() {
     : session?.user?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-100 bg-white/80 px-6 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-6 lg:px-8">
       <Button
         variant="ghost"
         size="icon"
@@ -41,10 +41,6 @@ export function Header() {
       <Breadcrumbs />
 
       <div className="ml-auto flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="relative h-9 w-9">
-          <Bell className="h-4 w-4 text-gray-500" />
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -56,26 +52,24 @@ export function Header() {
                   src={session?.user?.image ?? undefined}
                   alt={session?.user?.name ?? "User"}
                 />
-                <AvatarFallback className="bg-blue-600 text-xs font-semibold text-white">
+                <AvatarFallback className="bg-slate-950 text-xs font-semibold text-white">
                   {initials}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent
+            align="end"
+            className="w-56 rounded-xl border-slate-200 bg-white"
+          >
             <div className="px-3 py-2">
-              <p className="text-sm font-medium">
+              <p className="text-sm font-medium text-slate-900">
                 {session?.user?.name ?? "User"}
               </p>
               <p className="text-xs text-muted-foreground">
                 {session?.user?.email}
               </p>
             </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2">
-              <User className="h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="gap-2 text-red-600 focus:text-red-600"

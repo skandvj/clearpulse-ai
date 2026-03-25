@@ -109,7 +109,7 @@ interface SourceBadgeProps {
 
 export function SourceBadge({
   source,
-  showIcon = true,
+  showIcon = false,
   size = "sm",
   className,
 }: SourceBadgeProps) {

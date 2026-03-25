@@ -18,15 +18,7 @@ import { SourceBadge } from "@/components/ui/source-badge";
 import { getServerUser } from "@/lib/auth-helpers";
 import { getDashboardData } from "@/lib/dashboard";
 import { PERMISSIONS, hasPermission } from "@/lib/rbac";
-import {
-  ArrowRight,
-  Building2,
-  AlertTriangle,
-  AlertOctagon,
-  CircleDot,
-  ExternalLink,
-  TrendingDown,
-} from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import {
   KpiHealthBreakdownChart,
   SourceActivityChart,
@@ -100,52 +92,39 @@ export default async function DashboardPage() {
     {
       label: "Total Active Accounts",
       value: data.stats.totalAccounts,
-      icon: Building2,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-100",
+      tone: "text-slate-950",
     },
     {
       label: "Accounts Critical",
       value: data.stats.criticalAccounts,
-      icon: AlertOctagon,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-100",
+      tone: "text-red-600",
     },
     {
       label: "Accounts At Risk",
       value: data.stats.atRiskAccounts,
-      icon: AlertTriangle,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50",
-      borderColor: "border-amber-100",
+      tone: "text-amber-600",
     },
     {
       label: "KPIs Declining",
       value: data.stats.decliningKpis,
-      icon: TrendingDown,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      borderColor: "border-orange-100",
+      tone: "text-orange-600",
     },
   ];
 
   return (
     <PageWrapper>
       <div className="space-y-6">
-        <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.14),_transparent_45%),linear-gradient(135deg,_#ffffff,_#f8fbff)] p-6 shadow-sm">
+        <div className="rounded-[24px] border border-[#e3d8ca] bg-white p-7 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
-                Leadership View
-              </div>
-              <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-slate-950">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Portfolio
+              </p>
+              <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-slate-950">
                 Portfolio Dashboard
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Every signal. Every account. One source of truth across{" "}
-                {data.stats.totalAccounts} visible account
+                One clean view across {data.stats.totalAccounts} visible account
                 {data.stats.totalAccounts === 1 ? "" : "s"}.
               </p>
             </div>
@@ -154,7 +133,6 @@ export default async function DashboardPage() {
               <Button asChild variant="outline" className="bg-white/80">
                 <Link href="/accounts">
                   Open Accounts
-                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -163,25 +141,15 @@ export default async function DashboardPage() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card
-              key={stat.label}
-              className={`rounded-2xl ${stat.borderColor} shadow-sm`}
-            >
+            <Card key={stat.label}>
               <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bgColor}`}
-                  >
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      {stat.label}
-                    </p>
-                    <p className="text-2xl font-bold tracking-tight text-gray-900">
-                      {stat.value}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    {stat.label}
+                  </p>
+                  <p className={`mt-3 text-3xl font-bold tracking-tight ${stat.tone}`}>
+                    {stat.value}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -189,7 +157,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="rounded-2xl border-gray-100 shadow-sm">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold">
                 Portfolio Health Map
@@ -261,7 +229,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-gray-100 shadow-sm">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold">
                 KPI Health Breakdown
@@ -273,8 +241,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <KpiHealthBreakdownChart data={data.kpiHealthBreakdown} />
-              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-                <CircleDot className="h-3.5 w-3.5" />
+              <div className="mt-3 text-xs text-slate-500">
                 {data.kpiUnknownCount} KPI
                 {data.kpiUnknownCount === 1 ? "" : "s"} still need scoring.
               </div>
@@ -283,7 +250,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-          <Card className="rounded-2xl border-gray-100 shadow-sm">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold">
                 Source Signal Activity
@@ -297,7 +264,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-gray-100 shadow-sm">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold">
                 Recent AI Extractions
@@ -316,7 +283,7 @@ export default async function DashboardPage() {
                 data.recentExtractions.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-slate-100 p-4"
+                    className="rounded-[24px] border border-slate-100/90 bg-white/55 p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
@@ -356,7 +323,7 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card>
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <CardTitle className="text-base font-semibold">
@@ -370,7 +337,6 @@ export default async function DashboardPage() {
             <Button asChild variant="ghost" className="w-fit">
               <Link href="/accounts">
                 Open full account list
-                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </CardHeader>

@@ -24,12 +24,10 @@ import { HealthStatusBadge } from "@/components/ui/health-badge";
 import { HealthTrendIndicator } from "@/components/ui/health-badge";
 import { SourceBadge } from "@/components/ui/source-badge";
 import {
-  Plus,
   Pencil,
   Trash2,
   ChevronRight,
   FileText,
-  PlayCircle,
 } from "lucide-react";
 import { useDeleteKPI } from "@/lib/hooks/use-kpis";
 import { AddKPIDialog } from "./add-kpi-dialog";
@@ -209,20 +207,18 @@ export function KPITable({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 gap-1 px-2 text-xs font-normal"
+                className="h-7 px-2 text-xs font-normal"
                 onClick={(e) => {
                   e.stopPropagation();
                   setEvidenceKpi(row.original);
                 }}
               >
-                <FileText className="h-3 w-3" />
                 {count} signal{count !== 1 ? "s" : ""}
               </Button>
             );
           }
           return (
-            <Badge variant="outline" className="gap-1 text-xs">
-              <FileText className="h-3 w-3" />
+            <Badge variant="outline" className="text-xs">
               {count} signal{count !== 1 ? "s" : ""}
             </Badge>
           );
@@ -237,10 +233,9 @@ export function KPITable({
               href={row.original.videoClipUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+              className="inline-flex items-center text-xs font-medium text-blue-600 hover:text-blue-700"
               onClick={(e) => e.stopPropagation()}
             >
-              <PlayCircle className="h-3.5 w-3.5" />
               Open
             </a>
           ) : (
@@ -310,8 +305,7 @@ export function KPITable({
     <div className="space-y-3">
       {canEdit && (
         <div className="flex justify-end">
-          <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" />
+          <Button size="sm" onClick={() => setAddOpen(true)}>
             Add KPI
           </Button>
         </div>
@@ -325,15 +319,15 @@ export function KPITable({
           </p>
         </div>
       ) : (
-        <Card className="overflow-hidden rounded-2xl border-gray-100 shadow-sm">
+        <Card className="overflow-hidden">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-muted/30">
+                <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="sticky top-0 bg-muted/30"
+                      className="sticky top-0 bg-white/65"
                       style={
                         header.column.getSize() !== 150
                           ? { width: header.column.getSize() }
@@ -355,7 +349,7 @@ export function KPITable({
               {table.getRowModel().rows.map((row) => (
                 <Fragment key={row.id}>
                   <TableRow
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer"
                     onClick={() => {
                       if (row.original.healthNarrative) toggleRow(row.original.id);
                     }}
@@ -371,7 +365,7 @@ export function KPITable({
                   </TableRow>
                   {expandedRows[row.original.id] &&
                     row.original.healthNarrative && (
-                      <TableRow className="bg-muted/20">
+                      <TableRow className="bg-white/40">
                         <TableCell colSpan={columns.length} className="py-3">
                           <div className="pl-10">
                             <p className="mb-1 text-xs font-medium text-muted-foreground">

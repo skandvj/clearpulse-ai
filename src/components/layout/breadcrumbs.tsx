@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Fragment } from "react";
 
 interface BreadcrumbSegment {
@@ -45,7 +45,6 @@ export function Breadcrumbs() {
   if (crumbs.length <= 1) {
     return (
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Home className="h-3.5 w-3.5" />
         <span className="font-medium text-foreground">
           {crumbs[0]?.label ?? "Home"}
         </span>

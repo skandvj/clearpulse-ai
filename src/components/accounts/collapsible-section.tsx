@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 interface CollapsibleSectionProps {
   title: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   defaultOpen?: boolean;
   children: ReactNode;
   badge?: ReactNode;
@@ -23,15 +23,17 @@ export function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <Card className="rounded-2xl border-gray-100 shadow-sm">
+    <Card>
       <CardHeader
-        className="cursor-pointer select-none"
+        className="cursor-pointer select-none pb-4"
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Icon className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-base font-semibold">{title}</CardTitle>
+            {Icon ? <Icon className="h-4 w-4 text-muted-foreground" /> : null}
+            <CardTitle className="text-base font-semibold text-slate-900">
+              {title}
+            </CardTitle>
             {badge}
           </div>
           <ChevronDown

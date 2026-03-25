@@ -5,22 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Building2,
-  Target,
-  Compass,
-  Lightbulb,
-  BarChart3,
-  ClipboardList,
   AlertTriangle,
-  Users,
   CalendarDays,
-  Pencil,
-  RefreshCw,
-  ArrowUpDown,
-  ExternalLink,
-  Download,
   Clock,
-  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { useAccount } from "@/lib/hooks/use-accounts";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -365,7 +353,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
   return (
     <div className="space-y-6">
       {/* Section 1 — Header */}
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
+      <Card>
         <CardContent className="p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-start gap-4">
@@ -418,10 +406,8 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
                   onClick={() => router.push(`/accounts/${accountId}/edit`)}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
                   Edit
                 </Button>
               )}
@@ -429,17 +415,14 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
                   disabled={rescoreHealth.isPending}
                   onClick={() => rescoreHealth.mutate()}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
                   {rescoreHealth.isPending ? "Scoring…" : "Re-score Health"}
                 </Button>
               )}
               {canTriggerSync && (
-                <Button variant="outline" size="sm" className="gap-1.5" disabled>
-                  <ArrowUpDown className="h-3.5 w-3.5" />
+                <Button variant="outline" size="sm" disabled>
                   Sync Sources
                 </Button>
               )}
@@ -447,11 +430,9 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 <Button
                   variant="default"
                   size="sm"
-                  className="gap-1.5"
                   disabled={extractKpis.isPending}
                   onClick={() => extractKpis.mutate()}
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
                   Extract KPIs
                 </Button>
               )}
@@ -459,11 +440,9 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
                   disabled={pushToVitally.isPending}
                   onClick={() => pushToVitally.mutate()}
                 >
-                  <ExternalLink className="h-3.5 w-3.5" />
                   {pushToVitally.isPending ? "Pushing…" : "Push to Vitally"}
                 </Button>
               )}
@@ -471,11 +450,9 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
                   disabled={generateReport.isPending}
                   onClick={() => generateReport.mutate()}
                 >
-                  <Download className="h-3.5 w-3.5" />
                   {generateReport.isPending ? "Generating Report…" : "Download Report"}
                 </Button>
               )}
@@ -492,11 +469,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       </Card>
 
       {/* Section 2 — Solution Summary */}
-      <CollapsibleSection
-        title="Solution Summary"
-        icon={Building2}
-        defaultOpen
-      >
+      <CollapsibleSection title="Solution Summary" defaultOpen>
         <InlineEditField
           value={account.currentSolution}
           onSave={saveField("currentSolution")}
@@ -506,7 +479,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       </CollapsibleSection>
 
       {/* Section 3 — Current State */}
-      <CollapsibleSection title="Current State" icon={Compass} defaultOpen>
+      <CollapsibleSection title="Current State" defaultOpen>
         <InlineEditField
           value={account.currentState}
           onSave={saveField("currentState")}
@@ -516,7 +489,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       </CollapsibleSection>
 
       {/* Section 4 — Business Goals */}
-      <CollapsibleSection title="Business Goals" icon={Target} defaultOpen>
+      <CollapsibleSection title="Business Goals" defaultOpen>
         <InlineEditField
           value={account.businessGoals}
           onSave={saveField("businessGoals")}
@@ -526,7 +499,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       </CollapsibleSection>
 
       {/* Section 5 — Objectives */}
-      <CollapsibleSection title="Objectives" icon={Lightbulb} defaultOpen>
+      <CollapsibleSection title="Objectives" defaultOpen>
         <InlineEditField
           value={account.objectives}
           onSave={saveField("objectives")}
@@ -538,7 +511,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       {/* Section 6 — KPIs */}
       <CollapsibleSection
         title="KPIs"
-        icon={BarChart3}
         defaultOpen
         badge={
           <Badge variant="secondary" className="ml-1 text-xs">
@@ -555,11 +527,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       </CollapsibleSection>
 
       {/* Section 7 — Implementation Plan */}
-      <CollapsibleSection
-        title="Implementation Plan"
-        icon={ClipboardList}
-        defaultOpen={false}
-      >
+      <CollapsibleSection title="Implementation Plan" defaultOpen={false}>
         <InlineEditField
           value={account.implementationPlan}
           onSave={saveField("implementationPlan")}
@@ -569,11 +537,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       </CollapsibleSection>
 
       {/* Section 8 — Roadblocks */}
-      <CollapsibleSection
-        title="Roadblocks"
-        icon={AlertTriangle}
-        defaultOpen={false}
-      >
+      <CollapsibleSection title="Roadblocks" defaultOpen={false}>
         <InlineEditField
           value={account.roadblocks}
           onSave={saveField("roadblocks")}
@@ -585,7 +549,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       {/* Section 9 — Key Contacts */}
       <CollapsibleSection
         title="Key Contacts"
-        icon={Users}
         defaultOpen
         badge={
           <Badge variant="secondary" className="ml-1 text-xs">
@@ -603,7 +566,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       {/* Section 10 — Meeting History */}
       <CollapsibleSection
         title="Meeting History"
-        icon={CalendarDays}
         defaultOpen={false}
         badge={
           <Badge variant="secondary" className="ml-1 text-xs">
@@ -613,7 +575,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
       >
         {account.meetings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CalendarDays className="mb-3 h-10 w-10 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
               No meetings recorded yet.
             </p>

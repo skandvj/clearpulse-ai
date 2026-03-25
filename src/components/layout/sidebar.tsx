@@ -152,8 +152,10 @@ export function Sidebar() {
         <div className="border-t border-gray-800 p-3">
           {!sidebarCollapsed && (
             <div className="rounded-lg bg-gray-800/50 px-3 py-2.5">
-              <p className="text-xs font-medium text-gray-400">Signed in as</p>
-              <p className="truncate text-sm font-medium text-white">
+              <p className="text-xs font-medium text-gray-400">
+                Signed in as
+              </p>
+              <p className="mt-1 truncate text-sm font-medium text-white">
                 {session?.user?.name ?? session?.user?.email ?? "User"}
               </p>
               <p className="mt-0.5 text-xs text-gray-500">
