@@ -2,6 +2,8 @@
 
 This guide explains how to use ClearPulse day to day, how to connect each source, and how to configure the webhook flow that exists today.
 
+If you need the business and system diagrams for demos or walkthroughs, see [Product Architecture and AI Flow](product-architecture-and-ai-flow.md).
+
 ## 1. What ClearPulse Does
 
 ClearPulse is a customer intelligence workspace for post-sale teams. It:
