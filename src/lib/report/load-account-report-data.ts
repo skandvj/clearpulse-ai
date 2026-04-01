@@ -26,6 +26,15 @@ export interface AccountReportContact {
   isPrimary: boolean;
 }
 
+export interface AccountReportMeeting {
+  id: string;
+  title: string;
+  meetingDate: string;
+  summaryAI: string | null;
+  participants: string[];
+  hasRecording: boolean;
+}
+
 export interface AccountReportData {
   generatedAt: string;
   preparedBy: string;
@@ -53,6 +62,7 @@ export interface AccountReportData {
   };
   kpis: AccountReportKpi[];
   contacts: AccountReportContact[];
+  meetings: AccountReportMeeting[];
 }
 
 function roundScore(score: number | null): number | null {
@@ -127,6 +137,18 @@ export async function loadAccountReportData(
           },
         },
       },
+      meetings: {
+        orderBy: [{ meetingDate: "desc" }],
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          meetingDate: true,
+          summaryAI: true,
+          participants: true,
+          recordingUrl: true,
+        },
+      },
     },
   });
 
@@ -174,5 +196,13 @@ export async function loadAccountReportData(
       ),
     })),
     contacts: account.contacts,
+    meetings: account.meetings.map((meeting) => ({
+      id: meeting.id,
+      title: meeting.title,
+      meetingDate: meeting.meetingDate.toISOString(),
+      summaryAI: meeting.summaryAI,
+      participants: meeting.participants,
+      hasRecording: !!meeting.recordingUrl,
+    })),
   };
 }

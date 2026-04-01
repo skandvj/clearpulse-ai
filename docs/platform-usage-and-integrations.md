@@ -64,12 +64,14 @@ There are three setup modes in the current product:
 
 These can be configured directly in `/admin/integrations` and are stored encrypted server-side:
 
+- `AI_TEXT_PROVIDER`
 - `ANTHROPIC_API_KEY`
+- `GEMINI_API_KEY`
 - `OPENAI_API_KEY`
 
 What they power:
 
-- Anthropic: KPI extraction and KPI health scoring
+- Anthropic or Gemini: KPI extraction and KPI health scoring
 - OpenAI: embeddings and semantic deduplication
 
 ### Browser-managed integrations

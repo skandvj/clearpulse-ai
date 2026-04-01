@@ -1,11 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { KPICategory, KPISource, Prisma, SignalSource } from "@prisma/client";
-import { getAIRuntimeValue } from "@/lib/ai/settings";
 import { prisma } from "@/lib/db";
 import { KPI_EXTRACTION_SYSTEM } from "./prompts";
 import { z } from "zod";
-
-const MODEL = "claude-sonnet-4-20250514";
+import { generateStructuredText } from "@/lib/ai/text-provider";
+import { parseOrRepairStructuredJsonResponse } from "@/lib/ai/json-response";
 
 const kpiCategoryValues = [
   "DEFLECTION",
@@ -52,22 +50,6 @@ function normalizeMetricName(name: string): string {
     .replace(/\s+/g, " ")
     .replace(/[^\w\s/-]/g, "")
     .trim();
-}
-
-function stripJsonFence(text: string): string {
-  let t = text.trim();
-  if (t.startsWith("```")) {
-    t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-  }
-  return t.trim();
-}
-
-async function getAnthropicClient(): Promise<Anthropic> {
-  const key = await getAIRuntimeValue("ANTHROPIC_API_KEY");
-  if (!key) {
-    throw new Error("ANTHROPIC_API_KEY is not configured");
-  }
-  return new Anthropic({ apiKey: key });
 }
 
 const MAX_CHARS_PER_CHUNK = 26_000;
@@ -214,7 +196,6 @@ async function callExtraction(
   signals: SignalPayload[],
   highPriorityAuthors: string[]
 ): Promise<z.infer<typeof extractedKpiSchema>[]> {
-  const client = await getAnthropicClient();
   const userIntro =
     highPriorityAuthors.length > 0
       ? `HIGH_PRIORITY_AUTHORS (weight their statements heavily): ${highPriorityAuthors.join(", ")}\n\n`
@@ -222,23 +203,32 @@ async function callExtraction(
 
   const userBody = `${userIntro}Signals (JSON array):\n${JSON.stringify(signals)}`;
 
-  const msg = await client.messages.create({
-    model: MODEL,
-    max_tokens: 8192,
+  const response = await generateStructuredText({
     system: KPI_EXTRACTION_SYSTEM,
-    messages: [{ role: "user", content: userBody }],
+    prompt: userBody,
+    maxOutputTokens: 8192,
   });
-
-  const textBlock = msg.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Claude returned no text content");
-  }
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(stripJsonFence(textBlock.text));
-  } catch {
-    throw new Error("Failed to parse Claude JSON output");
+    parsed = await parseOrRepairStructuredJsonResponse({
+      text: response.text,
+      taskLabel: "KPI extraction",
+      maxOutputTokens: 8192,
+    });
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message.replace(
+            "Failed to parse AI JSON output",
+            "Failed to parse AI extraction JSON output"
+          )
+        : "Failed to parse AI extraction JSON output"
+    );
+  }
+
+  if (Array.isArray(parsed)) {
+    parsed = { kpis: parsed };
   }
 
   const validated = extractionResponseSchema.safeParse(parsed);

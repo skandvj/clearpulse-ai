@@ -102,9 +102,9 @@ flowchart TB
   end
 
   subgraph Intelligence["AI Intelligence Layer"]
-    Extract["Anthropic KPI extraction"]
+    Extract["Anthropic or Gemini KPI extraction"]
     Evidence["KPI evidence linking"]
-    Score["Anthropic KPI health scoring"]
+    Score["Anthropic or Gemini KPI health scoring"]
     Aggregate["Account health aggregation"]
   end
 
@@ -177,7 +177,7 @@ If a signal is effectively the same as something already stored, it is skipped. 
 
 ### Step 3: KPI Extraction
 
-Anthropic receives batches of normalized signals and returns structured KPI candidates, including:
+Anthropic or Gemini receives batches of normalized signals and returns structured KPI candidates, including:
 
 - metric name
 - target value
@@ -197,7 +197,7 @@ For each KPI, the system sends:
 - recent account context
 - priority notes and key contact signals
 
-Anthropic returns:
+The selected text-generation provider returns:
 
 - health score
 - health status

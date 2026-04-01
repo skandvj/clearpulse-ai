@@ -35,7 +35,11 @@ function mapAuthError(error: unknown) {
       return jsonForbidden(error.message);
     }
 
-    if (error.message === "ANTHROPIC_API_KEY is not configured") {
+    if (
+      error.message === "AI text provider is not configured" ||
+      error.message === "ANTHROPIC_API_KEY is not configured" ||
+      error.message === "GEMINI_API_KEY is not configured"
+    ) {
       return jsonError("AI extraction is not configured on the server", 503);
     }
 

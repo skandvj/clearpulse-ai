@@ -1,24 +1,57 @@
-import { env } from "@/env";
 import { prisma } from "@/lib/db";
-import { getIntegrationRuntimeValue } from "@/lib/integrations/settings";
-
-const FATHOM_API = "https://api.fathom.video/v1";
 
 export interface FathomAttendee {
   email: string;
   name?: string | null;
+  email_domain?: string | null;
+  is_external?: boolean | null;
+}
+
+interface FathomTranscriptEntry {
+  text?: string | null;
+  timestamp?: string | null;
+  speaker?: {
+    display_name?: string | null;
+    matched_calendar_invitee_email?: string | null;
+  } | null;
+}
+
+interface FathomActionItem {
+  description?: string | null;
+  recording_timestamp?: string | null;
+  recording_playback_url?: string | null;
+}
+
+interface FathomSummary {
+  markdown_formatted?: string | null;
 }
 
 export interface FathomMeetingPayload {
   id: string;
   title?: string | null;
+  meetingTitle?: string | null;
   date?: string | null;
-  duration_minutes?: number | null;
   attendees: FathomAttendee[];
-  recording_url?: string | null;
+  recordingUrl?: string | null;
+  shareUrl?: string | null;
   summary?: string | null;
   transcript?: string | null;
-  action_items?: string[] | null;
+  actionItems?: string[] | null;
+}
+
+export interface FathomWebhookPayload {
+  recording_id?: number | string;
+  title?: string | null;
+  meeting_title?: string | null;
+  url?: string | null;
+  share_url?: string | null;
+  created_at?: string | null;
+  scheduled_start_time?: string | null;
+  recording_start_time?: string | null;
+  calendar_invitees?: FathomAttendee[] | null;
+  transcript?: FathomTranscriptEntry[] | string | null;
+  default_summary?: FathomSummary | null;
+  action_items?: FathomActionItem[] | string[] | null;
 }
 
 function parseDate(value?: string | null): Date {
@@ -32,6 +65,62 @@ function normalizeParticipants(attendees: FathomAttendee[]): string[] {
     .filter((value): value is string => !!value);
 }
 
+function normalizeTranscript(
+  transcript?: FathomTranscriptEntry[] | string | null
+): string | null {
+  if (!transcript) return null;
+  if (typeof transcript === "string") {
+    const value = transcript.trim();
+    return value.length > 0 ? value : null;
+  }
+
+  const parts = transcript
+    .map((entry) => {
+      const text = entry.text?.trim();
+      if (!text) return null;
+      const speaker = entry.speaker?.display_name?.trim();
+      const timestamp = entry.timestamp?.trim();
+      const prefix = [timestamp, speaker].filter(Boolean).join(" ");
+      return prefix ? `[${prefix}] ${text}` : text;
+    })
+    .filter((value): value is string => !!value);
+
+  return parts.length > 0 ? parts.join("\n") : null;
+}
+
+function normalizeSummary(summary?: FathomSummary | string | null): string | null {
+  if (!summary) return null;
+  if (typeof summary === "string") {
+    const value = summary.trim();
+    return value.length > 0 ? value : null;
+  }
+
+  const value = summary.markdown_formatted?.trim();
+  return value && value.length > 0 ? value : null;
+}
+
+function normalizeActionItems(
+  actionItems?: FathomActionItem[] | string[] | null
+): string[] | null {
+  if (!actionItems || actionItems.length === 0) return null;
+
+  const values = actionItems
+    .map((item) => {
+      if (typeof item === "string") {
+        const value = item.trim();
+        return value.length > 0 ? value : null;
+      }
+
+      const description = item.description?.trim();
+      if (!description) return null;
+      const timestamp = item.recording_timestamp?.trim();
+      return timestamp ? `${description} (${timestamp})` : description;
+    })
+    .filter((value): value is string => !!value);
+
+  return values.length > 0 ? values : null;
+}
+
 export function extractDomainsFromEmails(emails: string[]): string[] {
   return Array.from(
     new Set(
@@ -42,31 +131,28 @@ export function extractDomainsFromEmails(emails: string[]): string[] {
   );
 }
 
-export function buildWebhookMeetingPayload(data?: {
-  meeting_id?: string;
-  title?: string;
-  date?: string;
-  duration_minutes?: number;
-  attendees?: FathomAttendee[];
-  recording_url?: string;
-  summary?: string;
-  transcript?: string;
-  action_items?: string[];
-}): FathomMeetingPayload | null {
-  if (!data?.meeting_id) {
+export function normalizeFathomMeeting(
+  data?: FathomWebhookPayload | null
+): FathomMeetingPayload | null {
+  if (!data?.recording_id) {
     return null;
   }
 
   return {
-    id: data.meeting_id,
-    title: data.title ?? null,
-    date: data.date ?? null,
-    duration_minutes: data.duration_minutes ?? null,
-    attendees: data.attendees ?? [],
-    recording_url: data.recording_url ?? null,
-    summary: data.summary ?? null,
-    transcript: data.transcript ?? null,
-    action_items: data.action_items ?? null,
+    id: String(data.recording_id),
+    title: data.meeting_title ?? data.title ?? null,
+    meetingTitle: data.meeting_title ?? null,
+    date:
+      data.recording_start_time ??
+      data.scheduled_start_time ??
+      data.created_at ??
+      null,
+    attendees: data.calendar_invitees ?? [],
+    recordingUrl: data.url ?? null,
+    shareUrl: data.share_url ?? null,
+    summary: normalizeSummary(data.default_summary ?? null),
+    transcript: normalizeTranscript(data.transcript ?? null),
+    actionItems: normalizeActionItems(data.action_items ?? null),
   };
 }
 
@@ -122,41 +208,6 @@ export async function findAccountForFathomAttendees(attendees: FathomAttendee[])
   });
 }
 
-export async function fetchFathomMeetingById(
-  meetingId: string
-): Promise<FathomMeetingPayload> {
-  const apiKey =
-    (await getIntegrationRuntimeValue("FATHOM", "FATHOM_API_KEY")) ??
-    env.FATHOM_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("FATHOM_API_KEY is not configured");
-  }
-
-  const response = await fetch(
-    `${FATHOM_API}/meetings/${encodeURIComponent(meetingId)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Fathom meeting lookup failed: ${response.status} ${response.statusText}`
-    );
-  }
-
-  const body = (await response.json()) as
-    | FathomMeetingPayload
-    | { meeting: FathomMeetingPayload };
-
-  return "meeting" in body ? body.meeting : body;
-}
-
 export async function upsertFathomMeetingRecord(
   accountId: string,
   meeting: FathomMeetingPayload
@@ -172,20 +223,20 @@ export async function upsertFathomMeetingRecord(
       fathomId: meeting.id,
       accountId,
       title: meeting.title?.trim() || "Fathom Meeting",
-      recordingUrl: meeting.recording_url ?? null,
+      recordingUrl: meeting.recordingUrl ?? meeting.shareUrl ?? null,
       transcriptRaw: meeting.transcript ?? null,
       summaryAI: meeting.summary ?? null,
-      duration: meeting.duration_minutes ?? null,
+      duration: null,
       meetingDate,
       participants,
     },
     update: {
       accountId,
       title: meeting.title?.trim() || "Fathom Meeting",
-      recordingUrl: meeting.recording_url ?? null,
+      recordingUrl: meeting.recordingUrl ?? meeting.shareUrl ?? null,
       transcriptRaw: meeting.transcript ?? null,
       summaryAI: meeting.summary ?? null,
-      duration: meeting.duration_minutes ?? null,
+      duration: null,
       meetingDate,
       participants,
     },

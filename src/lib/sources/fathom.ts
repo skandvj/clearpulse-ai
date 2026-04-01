@@ -1,37 +1,28 @@
 import { SignalSource } from "@prisma/client";
 import { SourceAdapter, RawSignalInput } from "@/lib/ingestion/types";
 import { prisma } from "@/lib/db";
-import { upsertFathomMeetingRecord } from "@/lib/integrations/fathom";
+import {
+  normalizeFathomMeeting,
+  upsertFathomMeetingRecord,
+  type FathomWebhookPayload,
+} from "@/lib/integrations/fathom";
 import { getIntegrationRuntimeValues } from "@/lib/integrations/settings";
 import { logError } from "@/lib/logging";
 import { resolveMockFallback } from "@/lib/sources/mock-fallback";
 
-interface FathomMeeting {
-  id: string;
-  title: string;
-  date: string;
-  duration_minutes: number;
-  attendees: { email: string; name: string }[];
-  recording_url?: string;
-  summary?: string;
-  transcript?: string;
-  action_items?: string[];
-}
-
 interface FathomListResponse {
-  meetings: FathomMeeting[];
-  has_more: boolean;
-  next_cursor?: string;
+  items: FathomWebhookPayload[];
+  next_cursor?: string | null;
 }
 
-const FATHOM_API = "https://api.fathom.video/v1";
+const FATHOM_API = "https://api.fathom.ai/external/v1";
 
 export class FathomAdapter implements SourceAdapter {
   source = SignalSource.FATHOM;
 
   async fetchSignals(
     accountId: string,
-    since?: Date,
+    since?: Date
   ): Promise<RawSignalInput[]> {
     const config = await getIntegrationRuntimeValues(this.source, [
       "FATHOM_API_KEY",
@@ -54,43 +45,63 @@ export class FathomAdapter implements SourceAdapter {
         include: { contacts: true },
       });
 
-      const domain = account.domain;
-      const contactEmails = new Set(
-        account.contacts
-          .map((c) => c.email?.toLowerCase())
-          .filter(Boolean) as string[],
+      const domain = account.domain?.trim().toLowerCase() ?? null;
+      const contactEmails = Array.from(
+        new Set(
+          account.contacts
+            .map((contact) => contact.email?.trim().toLowerCase())
+            .filter((value): value is string => !!value)
+        )
       );
 
-      const afterDate = since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const afterDate =
+        since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const signals: RawSignalInput[] = [];
       let cursor: string | undefined;
 
       do {
         const params = new URLSearchParams({
-          after: afterDate.toISOString(),
+          created_after: afterDate.toISOString(),
           limit: "50",
+          include_transcript: "true",
+          include_summary: "true",
+          include_action_items: "true",
           ...(cursor ? { cursor } : {}),
         });
 
-        const res = await fetch(`${FATHOM_API}/meetings?${params}`, {
+        if (domain) {
+          params.append("calendar_invitees_domains[]", domain);
+        }
+
+        for (const email of contactEmails) {
+          params.append("calendar_invitees[]", email);
+        }
+
+        const res = await fetch(`${FATHOM_API}/meetings?${params.toString()}`, {
           headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
+            "X-Api-Key": apiKey,
+            Accept: "application/json",
           },
+          cache: "no-store",
         });
 
         if (!res.ok) {
+          const body = await res.text().catch(() => "");
           throw new Error(
-            `Fathom API error: ${res.status} ${res.statusText}`,
+            `Fathom API error: ${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 300)}` : ""}`
           );
         }
 
         const data = (await res.json()) as FathomListResponse;
 
-        for (const meeting of data.meetings) {
-          const isAccountMeeting = meeting.attendees.some((a) => {
-            const email = a.email.toLowerCase();
-            if (contactEmails.has(email)) return true;
+        for (const item of data.items ?? []) {
+          const meeting = normalizeFathomMeeting(item);
+          if (!meeting) continue;
+
+          const isAccountMeeting = meeting.attendees.some((attendee) => {
+            const email = attendee.email?.trim().toLowerCase();
+            if (!email) return false;
+            if (contactEmails.includes(email)) return true;
             if (domain && email.endsWith(`@${domain}`)) return true;
             return false;
           });
@@ -103,36 +114,42 @@ export class FathomAdapter implements SourceAdapter {
           if (meeting.summary) {
             contentParts.push(`## AI Summary\n${meeting.summary}`);
           }
-          if (meeting.action_items?.length) {
+          if (meeting.actionItems?.length) {
             contentParts.push(
-              `## Action Items\n${meeting.action_items.map((a) => `- ${a}`).join("\n")}`,
+              `## Action Items\n${meeting.actionItems.map((value) => `- ${value}`).join("\n")}`
             );
           }
           if (meeting.transcript) {
             const truncated =
-              meeting.transcript.length > 3000
-                ? meeting.transcript.slice(0, 3000) + "\n[transcript truncated]"
+              meeting.transcript.length > 6000
+                ? `${meeting.transcript.slice(0, 6000)}\n[transcript truncated]`
                 : meeting.transcript;
             contentParts.push(`## Transcript\n${truncated}`);
           }
 
-          const externalAttendees = meeting.attendees.filter((a) => {
-            if (domain) return a.email.toLowerCase().endsWith(`@${domain}`);
-            return contactEmails.has(a.email.toLowerCase());
+          const matchingAttendees = meeting.attendees.filter((attendee) => {
+            const email = attendee.email?.trim().toLowerCase();
+            if (!email) return false;
+            if (contactEmails.includes(email)) return true;
+            return !!domain && email.endsWith(`@${domain}`);
           });
 
           signals.push({
             externalId: `fathom-${meeting.id}`,
-            title: meeting.title,
+            title: meeting.title ?? "Fathom Meeting",
             content:
               contentParts.join("\n\n") || "Meeting recorded — no summary available.",
-            author: externalAttendees.map((a) => a.name).join(", ") || undefined,
-            url: meeting.recording_url,
-            signalDate: new Date(meeting.date),
+            author:
+              matchingAttendees
+                .map((attendee) => attendee.name?.trim() || attendee.email)
+                .filter((value): value is string => !!value)
+                .join(", ") || undefined,
+            url: meeting.recordingUrl ?? meeting.shareUrl ?? undefined,
+            signalDate: new Date(meeting.date ?? afterDate.toISOString()),
           });
         }
 
-        cursor = data.has_more ? data.next_cursor : undefined;
+        cursor = data.next_cursor ?? undefined;
       } while (cursor);
 
       return signals;
@@ -147,13 +164,13 @@ export class FathomAdapter implements SourceAdapter {
   }
 
   private async generateMockSignals(
-    accountId: string,
+    accountId: string
   ): Promise<RawSignalInput[]> {
     const mockMeetings = [
       {
         title: "Q1 Quarterly Business Review",
         content: `## AI Summary
-Reviewed Q1 performance metrics with the customer's leadership team. Key achievements: 35% improvement in ticket deflection rate, successful launch of self-service portal. Customer expressed strong satisfaction with the product roadmap. Discussed expansion to the APAC region — VP of Customer Success requested a timeline for multi-language support.
+Reviewed Q1 performance metrics with the customer's leadership team. Key achievements: 35% improvement in ticket deflection rate, successful launch of self-service portal. Customer expressed strong satisfaction with the product roadmap. Discussed expansion to the APAC region and requested a timeline for multi-language support.
 
 ## Action Items
 - Send updated pricing proposal for APAC expansion by March 15
@@ -165,7 +182,7 @@ Reviewed Q1 performance metrics with the customer's leadership team. Key achieve
       {
         title: "Feature Demo: Advanced Analytics Module",
         content: `## AI Summary
-Walked through the new analytics dashboard with the product team. They were particularly interested in the cohort analysis and predictive churn features. Their data team had questions about API rate limits for bulk data export. One concern raised: current reporting doesn't support custom fiscal year calendars, which is a requirement for their finance team.
+Walked through the new analytics dashboard with the product team. They were particularly interested in cohort analysis and predictive churn features. Their data team had questions about API rate limits for bulk data export. One concern raised: current reporting doesn't support custom fiscal year calendars, which is a requirement for their finance team.
 
 ## Action Items
 - File product request for custom fiscal year calendar support
@@ -176,22 +193,22 @@ Walked through the new analytics dashboard with the product team. They were part
       {
         title: "Onboarding Kickoff: Marketing Department",
         content: `## AI Summary
-Kicked off onboarding for the marketing department (45 new users). Reviewed the implementation timeline — targeting full rollout by end of month. Their team lead is concerned about data migration from their legacy system. Agreed on bi-weekly check-ins during the onboarding phase. Training sessions scheduled for next Tuesday and Thursday.
+Kicked off onboarding for the marketing department (45 new users). Reviewed the implementation timeline and targeted full rollout by end of month. Their team lead is concerned about data migration from the legacy system. Agreed on bi-weekly check-ins during the onboarding phase.
 
 ## Action Items
 - Send data migration guide and CSV templates
 - Set up sandbox environment for marketing team
-- Schedule training sessions (Tues 2pm, Thurs 10am)
+- Schedule training sessions
 - Create shared Slack channel for onboarding support`,
         author: "Kevin Patel, Maria Santos",
       },
     ];
 
-    return mockMeetings.map((m, i) => ({
-      externalId: `mock-fathom-${accountId}-${i}`,
-      title: m.title,
-      content: m.content,
-      author: m.author,
+    return mockMeetings.map((meeting, index) => ({
+      externalId: `mock-fathom-${accountId}-${index}`,
+      title: meeting.title,
+      content: meeting.content,
+      author: meeting.author,
       signalDate: randomDateWithinLast30Days(),
     }));
   }

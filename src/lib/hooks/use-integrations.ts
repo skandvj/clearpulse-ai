@@ -16,9 +16,14 @@ export type IntegrationFieldInputType =
 export type IntegrationFieldValueSource =
   | "database"
   | "environment"
+  | "default"
   | "missing";
 
-export type AISettingKey = "ANTHROPIC_API_KEY" | "OPENAI_API_KEY";
+export type AISettingKey =
+  | "AI_TEXT_PROVIDER"
+  | "ANTHROPIC_API_KEY"
+  | "GEMINI_API_KEY"
+  | "OPENAI_API_KEY";
 
 export interface IntegrationFieldState {
   key: string;
@@ -37,11 +42,17 @@ export interface IntegrationFieldState {
 export interface AIFieldState {
   key: AISettingKey;
   label: string;
-  provider: "Anthropic" | "OpenAI";
+  provider: "Selection" | "Anthropic" | "Google Gemini" | "OpenAI";
   secret: boolean;
   browserEditable: boolean;
   helperText: string;
   placeholder?: string;
+  inputType: "text" | "password" | "url" | "email" | "select";
+  options?: Array<{
+    label: string;
+    value: string;
+  }>;
+  countInSummary?: boolean;
   configured: boolean;
   source: IntegrationFieldValueSource;
   value: string | null;

@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import {
   HealthStatus,
   HealthTrend,
@@ -7,14 +6,14 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getAIRuntimeValue } from "@/lib/ai/settings";
 import {
   isPriorityNoteAuthor,
   PRIORITY_NOTE_LABEL,
 } from "@/lib/priority-note-authors";
 import { KPI_HEALTH_SCORING_SYSTEM } from "./prompts";
+import { generateStructuredText } from "@/lib/ai/text-provider";
+import { parseOrRepairStructuredJsonResponse } from "@/lib/ai/json-response";
 
-const MODEL = "claude-sonnet-4-20250514";
 const MAX_EVIDENCE_PER_KPI = 10;
 const MAX_RECENT_SIGNALS_PER_SOURCE = 3;
 const MAX_RECENT_SIGNAL_CONTENT = 700;
@@ -45,6 +44,13 @@ type KpiEvidenceContext = ScoringSignalContext & {
   relevance: number;
 };
 
+type NormalizedScoringResponse = {
+  healthScore: number;
+  healthTrend: (typeof healthTrendValues)[number];
+  healthNarrative: string;
+  keyEvidenceIds: string[];
+};
+
 export type HealthScoringSummary = {
   kpisScored: number;
   accountHealthScore: number | null;
@@ -52,25 +58,85 @@ export type HealthScoringSummary = {
   scoredAt: string;
 };
 
-function stripJsonFence(text: string): string {
-  let value = text.trim();
-  if (value.startsWith("```")) {
-    value = value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-  }
-  return value.trim();
-}
-
-async function getAnthropicClient(): Promise<Anthropic> {
-  const key = await getAIRuntimeValue("ANTHROPIC_API_KEY");
-  if (!key) {
-    throw new Error("ANTHROPIC_API_KEY is not configured");
-  }
-
-  return new Anthropic({ apiKey: key });
-}
-
 function clampScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function coerceScore(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.trim().replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function coerceTrend(value: unknown): (typeof healthTrendValues)[number] | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  if (healthTrendValues.includes(normalized as (typeof healthTrendValues)[number])) {
+    return normalized as (typeof healthTrendValues)[number];
+  }
+  return null;
+}
+
+function coerceStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  return [];
+}
+
+function normalizeScoringResponse(
+  parsed: unknown,
+  fallbackEvidenceIds: string[]
+): NormalizedScoringResponse {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Invalid health scoring schema: response must be a JSON object");
+  }
+
+  const source = parsed as Record<string, unknown>;
+  const healthScore = coerceScore(source.healthScore);
+  const healthTrend =
+    coerceTrend(source.healthTrend) ??
+    coerceTrend(source.trend) ??
+    "STABLE";
+  const healthNarrative =
+    typeof source.healthNarrative === "string"
+      ? source.healthNarrative.trim()
+      : typeof source.narrative === "string"
+        ? source.narrative.trim()
+        : "";
+
+  const keyEvidenceIds = [
+    ...coerceStringArray(source.keyEvidenceIds),
+    ...coerceStringArray(source.keyEvidenceId),
+    ...coerceStringArray(source.keySignals),
+  ].filter((value, index, values) => values.indexOf(value) === index);
+
+  return {
+    healthScore: healthScore ?? 50,
+    healthTrend,
+    healthNarrative:
+      healthNarrative ||
+      "The available account evidence was enough to produce a directional score, but the model did not return a full narrative. Review the linked signals before relying on this assessment.",
+    keyEvidenceIds: (keyEvidenceIds.length > 0
+      ? keyEvidenceIds
+      : fallbackEvidenceIds
+    ).slice(0, 3),
+  };
 }
 
 function deriveHealthStatus(score: number | null): HealthStatus {
@@ -215,11 +281,13 @@ async function scoreSingleKpi(input: {
   healthNarrative: string;
   keyEvidenceIds: string[];
 }> {
-  const client = await getAnthropicClient();
   const validSignalIds = new Set([
     ...input.evidenceSignals.map((signal) => signal.id),
     ...input.recentSignals.map((signal) => signal.id),
   ]);
+  const fallbackEvidenceIds = input.evidenceSignals
+    .map((signal) => signal.id)
+    .slice(0, 3);
 
   if (validSignalIds.size === 0) {
     return {
@@ -232,36 +300,37 @@ async function scoreSingleKpi(input: {
     };
   }
 
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 1400,
+  const response = await generateStructuredText({
     system: KPI_HEALTH_SCORING_SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: JSON.stringify({
-          account: input.account,
-          kpi: input.kpi,
-          evidenceSignals: input.evidenceSignals,
-          recentSignals: input.recentSignals,
-        }),
-      },
-    ],
+    prompt: JSON.stringify({
+      account: input.account,
+      kpi: input.kpi,
+      evidenceSignals: input.evidenceSignals,
+      recentSignals: input.recentSignals,
+    }),
+    maxOutputTokens: 1400,
   });
-
-  const textBlock = message.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Claude returned no text content");
-  }
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(stripJsonFence(textBlock.text));
-  } catch {
-    throw new Error("Failed to parse Claude health scoring JSON output");
+    parsed = await parseOrRepairStructuredJsonResponse({
+      text: response.text,
+      taskLabel: "KPI health scoring",
+      maxOutputTokens: 2400,
+    });
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message.replace(
+            "Failed to parse AI JSON output",
+            "Failed to parse AI health scoring JSON output"
+          )
+        : "Failed to parse AI health scoring JSON output"
+    );
   }
 
-  const validated = scoringResponseSchema.safeParse(parsed);
+  const normalized = normalizeScoringResponse(parsed, fallbackEvidenceIds);
+  const validated = scoringResponseSchema.safeParse(normalized);
   if (!validated.success) {
     throw new Error(
       `Invalid health scoring schema: ${validated.error.issues[0]?.message ?? "unknown"}`

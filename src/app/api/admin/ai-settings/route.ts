@@ -17,7 +17,9 @@ import { prisma } from "@/lib/db";
 const updateSchema = z.object({
   values: z
     .object({
+      AI_TEXT_PROVIDER: z.enum(["anthropic", "gemini"]).optional(),
       ANTHROPIC_API_KEY: z.string().optional(),
+      GEMINI_API_KEY: z.string().optional(),
       OPENAI_API_KEY: z.string().optional(),
     })
     .default({}),

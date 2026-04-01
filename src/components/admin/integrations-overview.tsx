@@ -16,6 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SourceBadge, type SignalSource } from "@/components/ui/source-badge";
 
 type FieldLike = {
@@ -23,12 +30,16 @@ type FieldLike = {
   label: string;
   secret: boolean;
   configured: boolean;
-  source: "database" | "environment" | "missing";
+  source: "database" | "environment" | "default" | "missing";
   value: string | null;
   valuePreview: string | null;
   helperText?: string;
   placeholder?: string;
-  inputType?: "text" | "password" | "url" | "email";
+  inputType?: "text" | "password" | "url" | "email" | "select";
+  options?: Array<{
+    label: string;
+    value: string;
+  }>;
 };
 
 function formatDateTime(value: string | null): string {
@@ -71,6 +82,7 @@ function StatusBadge({
 function fieldSourceLabel(field: FieldLike): string {
   if (field.source === "database") return "Saved";
   if (field.source === "environment") return "Environment";
+  if (field.source === "default") return "Default";
   return "Missing";
 }
 
@@ -112,13 +124,28 @@ function FieldEditor({
           {fieldSourceLabel(field)}
         </span>
       </div>
-      <Input
-        id={`${idPrefix}-${field.key}`}
-        type={inputTypeForField(field)}
-        value={value}
-        placeholder={fieldPlaceholder(field)}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      {field.inputType === "select" && field.options ? (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger id={`${idPrefix}-${field.key}`}>
+            <SelectValue placeholder={field.placeholder ?? "Select"} />
+          </SelectTrigger>
+          <SelectContent>
+            {field.options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          id={`${idPrefix}-${field.key}`}
+          type={inputTypeForField(field)}
+          value={value}
+          placeholder={fieldPlaceholder(field)}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
     </div>
   );
 }

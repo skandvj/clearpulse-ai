@@ -1,26 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import {
-  buildWebhookMeetingPayload,
   extractDomainsFromEmails,
-  fetchFathomMeetingById,
   findAccountForFathomAttendees,
+  normalizeFathomMeeting,
   upsertFathomMeetingRecord,
-  type FathomAttendee,
+  type FathomWebhookPayload,
 } from "@/lib/integrations/fathom";
 import { getIntegrationRuntimeValue } from "@/lib/integrations/settings";
 import { logError, logWarn } from "@/lib/logging";
 
-function verifySignature(payload: string, signature: string | null, secret: string): boolean {
-  if (!signature) return false;
+function parseWebhookSecret(secret: string): Buffer {
+  const normalized = secret.startsWith("whsec_") ? secret.slice(6) : secret;
+  return Buffer.from(normalized, "base64");
+}
+
+function verifySignature(
+  payload: string,
+  webhookId: string | null,
+  webhookTimestamp: string | null,
+  signatureHeader: string | null,
+  secret: string
+): boolean {
+  if (!webhookId || !webhookTimestamp || !signatureHeader) {
+    return false;
+  }
+
+  const signedContent = `${webhookId}.${webhookTimestamp}.${payload}`;
   const expected = crypto
-    .createHmac("sha256", secret)
-    .update(payload)
-    .digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+    .createHmac("sha256", parseWebhookSecret(secret))
+    .update(signedContent)
+    .digest("base64");
+
+  const signatures = signatureHeader
+    .split(/\s+/)
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .filter((value) => !value.startsWith("v"));
+
+  return signatures.some((signature) => {
+    try {
+      return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expected)
+      );
+    } catch {
+      return false;
+    }
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -29,44 +57,47 @@ export async function POST(request: NextRequest) {
     "FATHOM_WEBHOOK_SECRET"
   );
   if (!secret) {
-    logError("webhook.fathom.unconfigured", new Error("FATHOM_WEBHOOK_SECRET not configured"));
+    logError(
+      "webhook.fathom.unconfigured",
+      new Error("FATHOM_WEBHOOK_SECRET not configured")
+    );
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
   const rawBody = await request.text();
-  const signature = request.headers.get("x-fathom-signature");
+  const webhookId = request.headers.get("webhook-id");
+  const webhookTimestamp = request.headers.get("webhook-timestamp");
+  const webhookSignature = request.headers.get("webhook-signature");
 
-  if (!verifySignature(rawBody, signature, secret)) {
+  if (
+    !verifySignature(
+      rawBody,
+      webhookId,
+      webhookTimestamp,
+      webhookSignature,
+      secret
+    )
+  ) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  let body: {
-    event?: string;
-    data?: {
-      meeting_id?: string;
-      title?: string;
-      date?: string;
-      duration_minutes?: number;
-      attendees?: FathomAttendee[];
-      recording_url?: string;
-      summary?: string;
-      transcript?: string;
-      action_items?: string[];
-    };
-  };
+  let body: FathomWebhookPayload;
 
   try {
-    body = JSON.parse(rawBody);
+    body = JSON.parse(rawBody) as FathomWebhookPayload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (body.event !== "meeting.completed") {
+  const meetingPayload = normalizeFathomMeeting(body);
+  if (!meetingPayload) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
-  const attendees = body.data?.attendees ?? [];
-  const attendeeEmails = attendees.map((a) => a.email).filter(Boolean);
+  const attendees = meetingPayload.attendees ?? [];
+  const attendeeEmails = attendees
+    .map((attendee) => attendee.email?.trim().toLowerCase())
+    .filter((value): value is string => !!value);
 
   if (attendeeEmails.length === 0) {
     logWarn("webhook.fathom.no_attendees", {});
@@ -79,35 +110,21 @@ export async function POST(request: NextRequest) {
   if (!account) {
     logWarn("webhook.fathom.account_not_matched", {
       domains,
+      recordingId: meetingPayload.id,
     });
     return NextResponse.json({ ok: true, matched: false });
   }
 
   let meetingRecordId: string | null = null;
-  let fetchedMeeting = buildWebhookMeetingPayload(body.data);
 
-  if (body.data?.meeting_id) {
-    try {
-      fetchedMeeting = await fetchFathomMeetingById(body.data.meeting_id);
-    } catch (error) {
-      logWarn("webhook.fathom.lookup_failed", {
-        meetingId: body.data.meeting_id,
-        error:
-          error instanceof Error ? error.message : "Meeting lookup failed",
-      });
-    }
-  }
-
-  if (fetchedMeeting) {
-    try {
-      const meeting = await upsertFathomMeetingRecord(account.id, fetchedMeeting);
-      meetingRecordId = meeting.id;
-    } catch (error) {
-      logError("webhook.fathom.meeting_upsert_failed", error, {
-        accountId: account.id,
-        meetingId: fetchedMeeting.id,
-      });
-    }
+  try {
+    const meeting = await upsertFathomMeetingRecord(account.id, meetingPayload);
+    meetingRecordId = meeting.id;
+  } catch (error) {
+    logError("webhook.fathom.meeting_upsert_failed", error, {
+      accountId: account.id,
+      meetingId: meetingPayload.id,
+    });
   }
 
   let ingestionSummary:
@@ -121,8 +138,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const { processIngestionJob } = await import("@/lib/ingestion/service");
-    const sinceCandidate = fetchedMeeting?.date
-      ? new Date(new Date(fetchedMeeting.date).getTime() - 24 * 60 * 60 * 1000)
+    const sinceCandidate = meetingPayload.date
+      ? new Date(new Date(meetingPayload.date).getTime() - 24 * 60 * 60 * 1000)
       : null;
     const since =
       sinceCandidate && !Number.isNaN(sinceCandidate.getTime())
@@ -137,7 +154,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     logError("webhook.fathom.ingestion_failed", err, {
       accountId: account.id,
-      meetingId: fetchedMeeting?.id ?? null,
+      meetingId: meetingPayload.id,
     });
   }
 

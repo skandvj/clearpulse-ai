@@ -10,6 +10,7 @@ import type {
   AccountReportContact,
   AccountReportData,
   AccountReportKpi,
+  AccountReportMeeting,
 } from "./load-account-report-data";
 
 const styles = StyleSheet.create({
@@ -309,6 +310,28 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
   },
+  meetingStack: {
+    marginTop: 14,
+  },
+  meetingCard: {
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  meetingTitle: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: "#0F172A",
+  },
+  meetingMeta: {
+    marginTop: 4,
+    fontSize: 9,
+    color: "#475569",
+    lineHeight: 1.45,
+  },
   footer: {
     position: "absolute",
     left: 36,
@@ -543,6 +566,29 @@ function ContactCard({ contact }: { contact: AccountReportContact }) {
   );
 }
 
+function MeetingCard({ meeting }: { meeting: AccountReportMeeting }) {
+  return (
+    <View style={styles.meetingCard}>
+      <Text style={styles.meetingTitle}>{meeting.title}</Text>
+      <Text style={styles.meetingMeta}>{formatDate(meeting.meetingDate)}</Text>
+      <Text style={styles.meetingMeta}>
+        {meeting.participants.length > 0
+          ? meeting.participants.join(", ")
+          : "Participants not captured"}
+      </Text>
+      <Text style={styles.meetingMeta}>
+        {renderFallbackText(
+          meeting.summaryAI,
+          "No AI summary has been stored for this meeting yet."
+        )}
+      </Text>
+      {meeting.hasRecording ? (
+        <Text style={styles.primaryTag}>Recording Available</Text>
+      ) : null}
+    </View>
+  );
+}
+
 function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
   const businessGoals = splitTextList(data.account.businessGoals);
   const objectives = splitTextList(data.account.objectives);
@@ -577,15 +623,19 @@ function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
               {statusLabel(data.account.healthStatus)}
             </Text>
           </View>
+          <View style={styles.coverCard}>
+            <Text style={styles.coverLabel}>KPIs Tracked</Text>
+            <Text style={styles.coverValue}>{String(data.kpis.length)}</Text>
+          </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Snapshot</Text>
           <Text style={styles.sectionBody}>
-            {data.account.name} is currently tracked in ClearPulse with{" "}
-            {data.kpis.length} KPI{data.kpis.length === 1 ? "" : "s"}, tier{" "}
-            {data.account.tierLabel ?? "not specified"}, and the latest sync on{" "}
-            {formatDate(data.account.lastSyncedAt)}.
+            This overview reflects the latest synced account data available in
+            ClearPulse as of {formatDate(data.account.lastSyncedAt)}. It includes
+            current account context, KPI health, implementation priorities, and
+            recent customer meeting context.
           </Text>
         </View>
 
@@ -597,9 +647,7 @@ function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.pageEyebrow}>Page 1</Text>
             <Text style={styles.pageTitle}>Account Summary</Text>
-            <Text style={styles.pageDescription}>
-              Current account context aligned to the CSM overview template.
-            </Text>
+            <Text style={styles.pageDescription}>Current account context.</Text>
           </View>
           <HealthChip
             score={data.account.healthScore}
@@ -654,9 +702,7 @@ function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
       <Page size="A4" style={styles.page}>
         <Text style={styles.pageEyebrow}>Page 2</Text>
         <Text style={styles.pageTitle}>Goals & Objectives</Text>
-        <Text style={styles.pageDescription}>
-          Leadership-facing goals and success measures captured for the account.
-        </Text>
+        <Text style={styles.pageDescription}>Business goals and success measures.</Text>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Business Goals</Text>
@@ -680,10 +726,7 @@ function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
       <Page size="A4" style={styles.page} wrap>
         <Text style={styles.pageEyebrow}>Page 3</Text>
         <Text style={styles.pageTitle}>KPIs / Measures of Success</Text>
-        <Text style={styles.pageDescription}>
-          Evidence-backed KPI health narratives and source coverage for this
-          account.
-        </Text>
+        <Text style={styles.pageDescription}>Evidence-backed KPI health.</Text>
 
         <View style={styles.table}>
           <View style={styles.tableHeader}>
@@ -711,9 +754,7 @@ function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
       <Page size="A4" style={styles.page}>
         <Text style={styles.pageEyebrow}>Page 4</Text>
         <Text style={styles.pageTitle}>Go-Forward Program</Text>
-        <Text style={styles.pageDescription}>
-          Implementation priorities and current blockers for the account.
-        </Text>
+        <Text style={styles.pageDescription}>Implementation priorities and blockers.</Text>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Implementation Priorities</Text>
@@ -736,11 +777,12 @@ function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
 
       <Page size="A4" style={styles.page}>
         <Text style={styles.pageEyebrow}>Page 5</Text>
-        <Text style={styles.pageTitle}>Key Contacts</Text>
-        <Text style={styles.pageDescription}>
-          Contacts currently mapped to this account in ClearPulse.
-        </Text>
+        <Text style={styles.pageTitle}>Contacts & Meeting Context</Text>
+        <Text style={styles.pageDescription}>Who is involved and what was discussed recently.</Text>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Key Contacts</Text>
+        </View>
         <View style={styles.contactGrid}>
           {data.contacts.length > 0 ? (
             data.contacts.map((contact) => (
@@ -749,6 +791,21 @@ function ClearPulseAccountReport({ data }: { data: AccountReportData }) {
           ) : (
             <Text style={styles.sectionBody}>
               No contacts have been added for this account yet.
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Meetings</Text>
+        </View>
+        <View style={styles.meetingStack}>
+          {data.meetings.length > 0 ? (
+            data.meetings.map((meeting) => (
+              <MeetingCard key={meeting.id} meeting={meeting} />
+            ))
+          ) : (
+            <Text style={styles.sectionBody}>
+              No meetings have been captured for this account yet.
             </Text>
           )}
         </View>

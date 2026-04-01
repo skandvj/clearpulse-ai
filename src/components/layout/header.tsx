@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useAppStore } from "@/stores/app-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,6 +42,9 @@ export function Header() {
       <Breadcrumbs />
 
       <div className="ml-auto flex items-center gap-3">
+        <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
+          <Link href="/support">Support</Link>
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

@@ -75,6 +75,7 @@ Browser-managed integration settings are now supported for the API-key style sou
 AI providers can also be managed from the browser in the same admin surface:
 
 - Anthropic
+- Google Gemini
 - OpenAI
 
 The remaining OAuth-heavy or hybrid sources still rely on environment configuration for now:
@@ -93,7 +94,7 @@ The remaining OAuth-heavy or hybrid sources still rely on environment configurat
 - NextAuth v5
 - TanStack Query + TanStack Table
 - BullMQ + Redis
-- Anthropic + OpenAI embeddings
+- Anthropic or Gemini for text generation + OpenAI embeddings
 
 ## Local Setup
 
