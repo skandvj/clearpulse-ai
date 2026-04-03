@@ -307,19 +307,19 @@ Slack tries to associate messages with an account using:
 
 #### Example: Slack matching
 
-If the account is `Cornerstone League`, the account slug becomes something like:
+If the account is `Harbor Atlas`, the account slug becomes something like:
 
-- `cornerstone-league`
+- `harbor-atlas`
 
 ClearPulse will try patterns such as:
 
-- `#cornerstone-league`
-- `#cs-cornerstone-league`
-- `#customer-cornerstone-league`
+- `#harbor-atlas`
+- `#cs-harbor-atlas`
+- `#customer-harbor-atlas`
 
 It can also search for messages mentioning the account domain, for example:
 
-- `cornerstoneleague.com`
+- `harboratlas.example`
 
 ### Fathom
 
@@ -332,20 +332,20 @@ Fathom mainly matches by:
 
 Suppose the ClearPulse account has:
 
-- account name: `Cornerstone League`
-- domain: `cornerstoneleague.com`
-- contact email: `maria@cornerstoneleague.com`
+- account name: `Harbor Atlas`
+- domain: `harboratlas.example`
+- contact email: `maria@harboratlas.example`
 
 And a Fathom meeting contains attendees:
 
-- `maria@cornerstoneleague.com`
+- `maria@harboratlas.example`
 - `csm@yourcompany.com`
 
 That meeting can be matched confidently.
 
 If there is no exact contact match, but the attendee email ends with:
 
-- `@cornerstoneleague.com`
+- `@harboratlas.example`
 
 the product can still match the meeting by domain.
 
@@ -361,7 +361,7 @@ Jira depends on normalized account label logic and issue label / project matchin
 
 #### Example: Why matching quality matters
 
-If a Fathom meeting from `cornerstoneleague.com` gets matched to the wrong account, then all downstream steps are polluted:
+If a Fathom meeting from `harboratlas.example` gets matched to the wrong account, then all downstream steps are polluted:
 
 - the meeting appears on the wrong account
 - KPIs are extracted from the wrong evidence
@@ -447,7 +447,7 @@ Each signal includes:
     "source": "SLACK",
     "signalDate": "2026-04-04T10:12:00.000Z",
     "author": "Support Team",
-    "title": "Message in #cornerstone-league",
+    "title": "Message in #harbor-atlas",
     "content": "Customer asked again when SSO-based auto-routing will be available for content groups."
   }
 ]
@@ -954,15 +954,15 @@ This is a simple walkthrough using a fictional account.
 
 Account:
 
-- `Cornerstone League`
-- domain: `cornerstoneleague.com`
-- contact: `maria@cornerstoneleague.com`
+- `Harbor Atlas`
+- domain: `harboratlas.example`
+- contact: `maria@harboratlas.example`
 
 ### Step 2: Fathom sync runs
 
 Fathom brings in a meeting with attendees:
 
-- `maria@cornerstoneleague.com`
+- `maria@harboratlas.example`
 - `csm@yourcompany.com`
 
 Meeting summary:
