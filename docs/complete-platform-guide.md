@@ -140,6 +140,26 @@ Signals usually contain:
 - URL
 - signal date
 
+#### Example: A normalized raw signal
+
+Below is the kind of shape ClearPulse is effectively working with after sync:
+
+```json
+{
+  "id": "cmngexample1",
+  "source": "FATHOM",
+  "title": "Quarterly Business Review",
+  "author": "Dana Kim, Alex Boyd",
+  "signalDate": "2026-04-03T14:00:00.000Z",
+  "content": "## AI Summary\nCustomer said onboarding is moving well, but SSO routing is still manual.\n\n## Transcript\n[00:07:46 Dana Kim] We still need auto-routing through SSO groups before the rollout is complete.",
+  "url": "https://fathom.ai/recording/123"
+}
+```
+
+This is not yet a KPI.
+
+It is just one structured piece of evidence that may later support one or more KPIs.
+
 ### KPI
 
 A `ClientKPI` is a structured measurable item derived from account evidence.
@@ -153,6 +173,25 @@ Examples:
 - renewal risk signal
 
 A KPI is the product’s structured interpretation of the account’s measurable success criteria.
+
+#### Example: What a KPI looks like after extraction
+
+```json
+{
+  "metricName": "SSO-based content routing adoption",
+  "targetValue": "100%",
+  "currentValue": "Manual dropdown routing",
+  "unit": null,
+  "category": "ADOPTION"
+}
+```
+
+That KPI is much more useful than the original meeting sentence because it is:
+
+- named
+- categorized
+- measurable
+- linked to evidence
 
 ### KPI Evidence
 
@@ -266,12 +305,49 @@ Slack tries to associate messages with an account using:
 - special channel naming patterns
 - message search using the account domain
 
+#### Example: Slack matching
+
+If the account is `Cornerstone League`, the account slug becomes something like:
+
+- `cornerstone-league`
+
+ClearPulse will try patterns such as:
+
+- `#cornerstone-league`
+- `#cs-cornerstone-league`
+- `#customer-cornerstone-league`
+
+It can also search for messages mentioning the account domain, for example:
+
+- `cornerstoneleague.com`
+
 ### Fathom
 
 Fathom mainly matches by:
 
 - attendee email matching a known account contact
 - attendee domain matching the account domain
+
+#### Example: Fathom matching
+
+Suppose the ClearPulse account has:
+
+- account name: `Cornerstone League`
+- domain: `cornerstoneleague.com`
+- contact email: `maria@cornerstoneleague.com`
+
+And a Fathom meeting contains attendees:
+
+- `maria@cornerstoneleague.com`
+- `csm@yourcompany.com`
+
+That meeting can be matched confidently.
+
+If there is no exact contact match, but the attendee email ends with:
+
+- `@cornerstoneleague.com`
+
+the product can still match the meeting by domain.
 
 This means Fathom does not give ClearPulse a strong CRM-style account object. The product infers account association from the meeting participants.
 
@@ -282,6 +358,16 @@ Vitally depends on `vitallyAccountId` already being stored on the ClearPulse acc
 ### Jira
 
 Jira depends on normalized account label logic and issue label / project matching.
+
+#### Example: Why matching quality matters
+
+If a Fathom meeting from `cornerstoneleague.com` gets matched to the wrong account, then all downstream steps are polluted:
+
+- the meeting appears on the wrong account
+- KPIs are extracted from the wrong evidence
+- health scoring becomes misleading
+
+That is why matching logic is more important than it first looks.
 
 ### Why this matters
 
@@ -344,6 +430,29 @@ Each signal includes:
 - `title`
 - `content`
 
+#### Example: simplified extraction input
+
+```json
+[
+  {
+    "id": "sig_1",
+    "source": "FATHOM",
+    "signalDate": "2026-04-03T14:00:00.000Z",
+    "author": "Dana Kim, Alex Boyd",
+    "title": "Quarterly Business Review",
+    "content": "Customer said onboarding is on track, but SSO routing is still manual and blocks the final rollout."
+  },
+  {
+    "id": "sig_2",
+    "source": "SLACK",
+    "signalDate": "2026-04-04T10:12:00.000Z",
+    "author": "Support Team",
+    "title": "Message in #cornerstone-league",
+    "content": "Customer asked again when SSO-based auto-routing will be available for content groups."
+  }
+]
+```
+
 ### Extraction output
 
 The model must return a JSON object with `kpis: []`.
@@ -359,6 +468,35 @@ The model is not allowed to say:
 It has to say:
 
 "This KPI is supported by signal X"
+
+#### Example: simplified extraction output
+
+```json
+{
+  "kpis": [
+    {
+      "metricName": "Content group auto-routing rollout",
+      "targetValue": "SSO-based auto-routing live",
+      "currentValue": "Manual dropdown routing",
+      "unit": null,
+      "category": "ADOPTION",
+      "approximateTimestamp": 466,
+      "evidence": [
+        {
+          "signalId": "sig_1",
+          "excerpt": "SSO routing is still manual and blocks the final rollout.",
+          "relevance": 0.96
+        },
+        {
+          "signalId": "sig_2",
+          "excerpt": "Customer asked again when SSO-based auto-routing will be available.",
+          "relevance": 0.87
+        }
+      ]
+    }
+  ]
+}
+```
 
 ### Why this helps
 
@@ -424,6 +562,29 @@ If KPI evidence comes from a Fathom-linked meeting, ClearPulse can attach a time
 
 This helps tie a KPI back to a real moment in a conversation.
 
+#### Example: A KPI that should be accepted
+
+Signals:
+
+- meeting summary says rollout is blocked by manual routing
+- Slack follow-up asks for the same routing change
+- Jira issue exists for the same blocker
+
+Result:
+
+- good chance this becomes a valid KPI because the evidence is specific and repeated
+
+#### Example: A KPI that should be treated cautiously
+
+Signal:
+
+- one meeting summary says "customer is generally excited about the platform"
+
+Result:
+
+- this may be useful sentiment
+- but it is weak KPI evidence because there is no clear measurable metric in the statement
+
 ## 13. How Do We Know The KPI Is “Correct”?
 
 The honest answer is:
@@ -455,6 +616,22 @@ It is saying:
 
 "Based on the available evidence, this is the best structured KPI interpretation we can derive right now"
 
+#### Example: Strong KPI confidence
+
+- three recent signals mention the same adoption blocker
+- one signal includes a direct metric
+- one signal comes from a key customer contact
+
+This is a strong case for extracting and trusting the KPI.
+
+#### Example: Weak KPI confidence
+
+- one vague summary
+- no metric values
+- no repeated mention elsewhere
+
+This is a weak case. The KPI might still be created, but a human should review it carefully.
+
 ## 14. What “Signal Author” Means
 
 `author` means the best available person label attached to a signal.
@@ -484,6 +661,23 @@ That means a Fathom meeting signal may show a useful person label, but it does n
 "This exact sentence was spoken by this exact person"
 
 That is why meeting author should be treated as context, not always exact attribution.
+
+#### Example: Meeting author nuance
+
+If a Fathom meeting has participants:
+
+- `Dana Kim`
+- `Alex Boyd`
+
+and the transcript includes:
+
+- "We still need SSO routing before the rollout is complete"
+
+the top-level signal author may be:
+
+- `Dana Kim, Alex Boyd`
+
+But that does not prove Dana said the line rather than Alex. It only tells us those people were associated with the meeting signal.
 
 ## 15. High Priority Authors
 
@@ -526,6 +720,42 @@ The product then derives `healthStatus` from the score range:
 The important point is that health scoring is not based on one KPI row alone.
 
 It is based on the KPI plus evidence plus recent account context.
+
+#### Example: Health scoring input
+
+Imagine a KPI like:
+
+- `Onboarding completion rate`
+
+Evidence might include:
+
+- a Fathom meeting saying rollout is blocked by SSO routing
+- a Slack escalation asking for a go-live date
+- a Vitally note saying the customer is frustrated but still engaged
+
+The scorer does not just see:
+
+- `currentValue = 62%`
+
+It also sees the surrounding context and explains why 62% is healthy, stable, or at risk.
+
+#### Example: Same KPI, different health interpretation
+
+Two accounts can both have `62% adoption`.
+
+Account A:
+
+- trend is rising
+- blockers are resolving
+- customer is positive
+
+Account B:
+
+- trend is flat
+- blocker is still open
+- customer is escalating
+
+ClearPulse may score those two KPIs differently because the evidence context is different.
 
 ## 17. Account-Level Health
 
@@ -607,6 +837,20 @@ So the freshest workflow is:
 
 If a report was generated before the last sync, it may already be stale.
 
+#### Example: Freshness timeline
+
+Suppose:
+
+- Slack synced at 9:00 AM
+- Fathom synced at 9:10 AM
+- KPIs were extracted at 9:20 AM
+- health was scored at 9:25 AM
+- report was generated at 9:30 AM
+
+That report is reasonably fresh for the account state at 9:30 AM.
+
+But if a new customer escalation arrived in Slack at 11:00 AM and no new sync happened, the report is already missing that new evidence.
+
 ## 21. Where The System Is Strong
 
 ClearPulse is strongest in these areas:
@@ -676,6 +920,16 @@ If the account was not synced recently, extraction and scoring are based on old 
 
 If only one source is connected, the account story may be incomplete.
 
+#### Example: Partial picture failure
+
+Imagine ClearPulse only has Fathom connected for an account.
+
+The meeting transcript sounds positive, so KPI health looks good.
+
+But Jira is not connected, and there are actually 4 open blockers.
+
+In that case, the health output is not exactly wrong. It is incomplete because the evidence layer is incomplete.
+
 ## 25. A Good Mental Model
 
 The easiest way to understand ClearPulse is this:
@@ -692,7 +946,85 @@ The key idea is that AI is not replacing the evidence layer.
 
 It is interpreting the evidence layer.
 
-## 26. The Best Way To Use ClearPulse Well
+## 26. Example Walkthrough: One Account From Sync To Score
+
+This is a simple walkthrough using a fictional account.
+
+### Step 1: The account exists
+
+Account:
+
+- `Cornerstone League`
+- domain: `cornerstoneleague.com`
+- contact: `maria@cornerstoneleague.com`
+
+### Step 2: Fathom sync runs
+
+Fathom brings in a meeting with attendees:
+
+- `maria@cornerstoneleague.com`
+- `csm@yourcompany.com`
+
+Meeting summary:
+
+- onboarding is progressing
+- content group access still requires manual dropdown routing
+- customer wants SSO-based auto-routing before broader rollout
+
+This becomes:
+
+- a `Meeting`
+- a `RawSignal`
+
+### Step 3: Slack sync runs
+
+Slack finds:
+
+- a customer Slack message asking when auto-routing will be ready
+
+This becomes another `RawSignal`.
+
+### Step 4: Extraction runs
+
+The extractor sees both signals and may produce a KPI like:
+
+- `Content group auto-routing rollout`
+
+with evidence pointing to both the meeting and Slack signal.
+
+### Step 5: Scoring runs
+
+The scorer sees:
+
+- the KPI
+- the meeting evidence
+- the Slack evidence
+- recent account context
+
+It might conclude:
+
+- score: `48`
+- trend: `STABLE`
+- status: `AT_RISK`
+
+Why?
+
+Because the customer still wants the capability, the blocker is explicit, and rollout is not complete.
+
+### Step 6: Product surfaces update
+
+Now the same underlying data appears in:
+
+- the account KPI table
+- the evidence drawer
+- the meeting detail page
+- the account health summary
+- the dashboard
+- the PDF report
+
+This is the core value of the product: one synced evidence layer powering many views.
+
+## 27. The Best Way To Use ClearPulse Well
 
 If you want the best outcomes from the platform:
 
@@ -704,7 +1036,7 @@ If you want the best outcomes from the platform:
 - review evidence, not just scores
 - treat the system as a decision-support tool, not a blind auto-truth engine
 
-## 27. Final Summary
+## 28. Final Summary
 
 ClearPulse works by building one account evidence layer and then using AI to turn that evidence into KPI and health decisions.
 
