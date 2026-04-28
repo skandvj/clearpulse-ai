@@ -21,9 +21,21 @@ export async function GET(
       include: {
         csm: { select: { id: true, name: true, email: true, avatarUrl: true } },
         kpis: {
-          include: { _count: { select: { evidence: true } } },
+          include: {
+            _count: { select: { evidence: true } },
+            evidence: {
+              select: {
+                signal: {
+                  select: {
+                    source: true,
+                  },
+                },
+              },
+            },
+          },
         },
         contacts: true,
+        _count: { select: { kpis: true, signals: true } },
         meetings: {
           orderBy: { meetingDate: "desc" },
           take: 5,

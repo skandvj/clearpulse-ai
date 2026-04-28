@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
-  CalendarDays,
   Clock,
   ExternalLink,
   Users,
@@ -61,7 +60,7 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
     return (
       <PageWrapper>
         <div className="space-y-6">
-          <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.14),_transparent_45%),linear-gradient(135deg,_#ffffff,_#f8fbff)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-none">
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild variant="ghost" size="sm" className="w-fit px-0">
                 <Link href={`/accounts/${params.id}`}>
@@ -72,10 +71,10 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
             </div>
 
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
                 Meeting Archive
               </div>
-              <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-slate-950">
+              <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-slate-950">
                 {account.name} Meetings
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">
@@ -85,7 +84,7 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
             </div>
           </div>
 
-          <Card className="rounded-2xl border-gray-100 shadow-sm">
+          <Card className="rounded-3xl border-slate-200 shadow-none">
             <CardHeader>
               <CardTitle className="text-base font-semibold">
                 Meeting Timeline
@@ -98,7 +97,6 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
             <CardContent>
               {account.meetings.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <CalendarDays className="mb-3 h-12 w-12 text-slate-300" />
                   <p className="text-sm text-slate-500">
                     No meetings have been captured for this account yet.
                   </p>
@@ -108,7 +106,7 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
                   {account.meetings.map((meeting) => (
                     <Card
                       key={meeting.id}
-                      className="rounded-2xl border-slate-100 shadow-none"
+                      className="rounded-2xl border-slate-200 shadow-none"
                     >
                       <CardContent className="p-5">
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -116,7 +114,7 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge
                                 variant="outline"
-                                className="border-blue-200 bg-blue-50 text-blue-700"
+                                className="border-slate-200 bg-slate-50 text-slate-600"
                               >
                                 {formatDate(meeting.meetingDate)}
                               </Badge>
@@ -128,7 +126,7 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
                             <div>
                               <Link
                                 href={`/accounts/${params.id}/meetings/${meeting.id}`}
-                                className="text-lg font-semibold text-slate-900 hover:text-blue-600"
+                                className="text-lg font-semibold text-slate-900 hover:text-slate-700"
                               >
                                 {meeting.title}
                               </Link>
@@ -173,7 +171,7 @@ export default async function MeetingsPage({ params }: MeetingsPageProps) {
                                   href={meeting.recordingUrl}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                                  className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-900"
                                 >
                                   <ExternalLink className="h-4 w-4" />
                                   Recording

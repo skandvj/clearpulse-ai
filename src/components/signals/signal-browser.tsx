@@ -109,27 +109,43 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Signal Browser</h1>
-          {data && (
-            <p className="text-sm text-muted-foreground mt-1">
-              {data.total} signal{data.total !== 1 ? "s" : ""} found
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-none">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Signal Browser
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Review raw evidence before and after KPI extraction.
             </p>
+            {data && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {data.total} signal{data.total !== 1 ? "s" : ""} found
+              </p>
+            )}
+          </div>
+          {can(PERMISSIONS.TRIGGER_SOURCE_SYNC) && (
+            <SyncTriggerButton accountId={accountId} />
           )}
         </div>
-        {can(PERMISSIONS.TRIGGER_SOURCE_SYNC) && (
-          <SyncTriggerButton accountId={accountId} />
-        )}
       </div>
 
-      {/* Filter Bar */}
-      <div className="space-y-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        {/* Source Toggles */}
+      <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-none">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-medium text-slate-900">Filters</p>
+          {hasActiveFilters ? (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-900"
+            >
+              <X className="h-3 w-3" />
+              Reset
+            </button>
+          ) : null}
+        </div>
+
         <div className="flex flex-wrap gap-2">
           {ALL_SOURCES.map((source) => {
-            const config = getSourceConfig(source);
             const active = activeSources.has(source);
             return (
               <button
@@ -138,17 +154,16 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
                   active
-                    ? `${config.bgColor} ${config.color} ${config.borderColor}`
-                    : "border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100"
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
-                {config.label}
+                {getSourceConfig(source).label}
               </button>
             );
           })}
         </div>
 
-        {/* Search & Filters */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -186,25 +201,14 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
             placeholder="To date"
           />
         </div>
-
-        {hasActiveFilters && (
-          <button
-            onClick={clearFilters}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="h-3 w-3" />
-            Clear all filters
-          </button>
-        )}
       </div>
 
-      {/* Signal List */}
       {isLoading ? (
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-none"
             >
               <div className="flex items-start gap-3">
                 <Skeleton className="h-6 w-20 rounded-full" />
@@ -219,8 +223,7 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
           ))}
         </div>
       ) : !data || data.signals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-16 px-6 text-center">
-          <Search className="h-10 w-10 text-muted-foreground/40 mb-4" />
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-16 text-center">
           <p className="text-sm font-medium text-muted-foreground">
             No signals found.
           </p>
@@ -251,7 +254,7 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
                   onClick={() =>
                     setExpandedId(isExpanded ? null : signal.id)
                   }
-                  className="w-full text-left rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+                  className="w-full rounded-3xl border border-slate-200 bg-white p-5 text-left transition-colors hover:bg-slate-50/70"
                 >
                   <div className="flex items-start gap-3">
                     {/* Left: Source + processed indicator */}
@@ -262,7 +265,7 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
                           "h-2.5 w-2.5 rounded-full",
                           signal.processed
                             ? "bg-emerald-500"
-                            : "bg-gray-300"
+                            : "bg-slate-300"
                         )}
                         title={
                           signal.processed ? "Processed" : "Not processed"
@@ -294,15 +297,14 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
                         </p>
                       )}
 
-                      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
                         {isExpanded ? signal.content : contentPreview}
                       </p>
 
-                      {/* Meta badges */}
                       <div className="flex items-center gap-2 pt-1">
                         {signal._count.kpiEvidence > 0 && (
                           <Badge
-                            variant="secondary"
+                            variant="outline"
                             className="text-xs gap-1"
                           >
                             <Link2 className="h-3 w-3" />
@@ -321,7 +323,7 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-gray-100 hover:text-foreground transition-colors"
+                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-slate-100 hover:text-foreground"
                         title="Open original"
                       >
                         <ExternalLink className="h-4 w-4" />
@@ -335,7 +337,6 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
         </AnimatePresence>
       )}
 
-      {/* Pagination */}
       {data && totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <Button

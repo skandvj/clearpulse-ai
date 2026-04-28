@@ -4,12 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  AlertTriangle,
-  CalendarDays,
-  Clock,
-  ExternalLink,
-} from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useAccount } from "@/lib/hooks/use-accounts";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PERMISSIONS } from "@/lib/rbac";
@@ -47,12 +42,19 @@ export interface KPI {
   healthNarrative: string | null;
   healthTrend: string | null;
   lastScoredAt: string | null;
+  classificationOverride: string | null;
+  classificationNote: string | null;
   videoTimestamp: number | null;
   videoClipUrl: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
   _count: { evidence: number };
+  evidence?: Array<{
+    signal: {
+      source: string;
+    };
+  }>;
 }
 
 export interface Contact {
@@ -138,6 +140,19 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+function getHealthSummary(status: string) {
+  switch (status) {
+    case "HEALTHY":
+      return "Account is currently healthy.";
+    case "AT_RISK":
+      return "Account needs attention across one or more KPIs.";
+    case "CRITICAL":
+      return "Account is in a critical state and needs intervention.";
+    default:
+      return "Account health has not been fully established yet.";
+  }
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -334,7 +349,6 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
   if (error || !account) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <AlertTriangle className="mb-3 h-10 w-10 text-destructive/60" />
         <p className="text-lg font-medium">Failed to load account</p>
         <p className="mt-1 text-sm text-muted-foreground">
           {error?.message || "Account not found"}
@@ -352,14 +366,14 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="rounded-3xl border-slate-200 shadow-none">
         <CardContent className="p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-start gap-4">
-              <HealthRing score={account.healthScore ?? 0} size={56} />
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <h1 className="font-display text-2xl font-bold tracking-tight text-gray-900">
+              <HealthRing score={account.healthScore ?? 0} size={52} />
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">
                     {account.name}
                   </h1>
                   <HealthStatusBadge
@@ -372,31 +386,34 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                     }
                   />
                   {account.tier && (
-                    <Badge variant="secondary">
+                    <Badge
+                      variant="outline"
+                      className="border-slate-200 bg-slate-50 text-slate-600"
+                    >
                       {formatTierLabel(account.tier)}
                     </Badge>
                   )}
                 </div>
-                {account.industry && (
-                  <p className="text-sm text-muted-foreground">
-                    {account.industry}
-                  </p>
-                )}
-                {account.csm && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <Avatar className="h-6 w-6">
-                      {account.csm.avatarUrl && (
-                        <AvatarImage src={account.csm.avatarUrl} />
-                      )}
-                      <AvatarFallback className="text-[10px]">
-                        {getInitials(account.csm.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-500">
+                  {getHealthSummary(account.healthStatus)}
+                </p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+                  {account.industry ? <span>{account.industry}</span> : null}
+                  {account.domain ? <span>{account.domain}</span> : null}
+                  {account.csm ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        {account.csm.avatarUrl && (
+                          <AvatarImage src={account.csm.avatarUrl} />
+                        )}
+                        <AvatarFallback className="text-[10px]">
+                          {getInitials(account.csm.name)}
+                        </AvatarFallback>
+                      </Avatar>
                       {account.csm.name}
                     </span>
-                  </div>
-                )}
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -422,12 +439,12 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
               )}
               {canTriggerSync && (
                 <Button
-                  variant="default"
+                  variant="outline"
                   size="sm"
                   disabled={extractKpis.isPending}
                   onClick={() => extractKpis.mutate()}
                 >
-                  Extract KPIs
+                  {extractKpis.isPending ? "Extracting…" : "Extract KPIs"}
                 </Button>
               )}
               {can(PERMISSIONS.PUSH_TO_VITALLY) && (
@@ -447,62 +464,51 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
                   disabled={generateReport.isPending}
                   onClick={() => generateReport.mutate()}
                 >
-                  {generateReport.isPending ? "Generating Report…" : "Download Report"}
+                  {generateReport.isPending ? "Generating…" : "Download Report"}
                 </Button>
               )}
             </div>
           </div>
 
-          {account.lastSyncedAt && (
-            <div className="mt-4 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              Last synced {formatRelative(account.lastSyncedAt)}
+          <div className="mt-5 grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Health score
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                {account.healthScore != null
+                  ? `${Math.round(account.healthScore)}/100`
+                  : "Not scored"}
+              </p>
             </div>
-          )}
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                KPI count
+              </p>
+              <p className="mt-1 text-sm text-slate-700">{account._count.kpis}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Last synced
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                {account.lastSyncedAt
+                  ? formatRelative(account.lastSyncedAt)
+                  : "Not synced"}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      <CollapsibleSection title="Solution Summary" defaultOpen>
-        <InlineEditField
-          value={account.currentSolution}
-          onSave={saveField("currentSolution")}
-          canEdit={canEdit}
-          placeholder="Describe the current solution..."
-        />
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Current State" defaultOpen>
-        <InlineEditField
-          value={account.currentState}
-          onSave={saveField("currentState")}
-          canEdit={canEdit}
-          placeholder="Describe the current state..."
-        />
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Business Goals" defaultOpen>
-        <InlineEditField
-          value={account.businessGoals}
-          onSave={saveField("businessGoals")}
-          canEdit={canEdit}
-          placeholder="Define business goals..."
-        />
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Objectives" defaultOpen>
-        <InlineEditField
-          value={account.objectives}
-          onSave={saveField("objectives")}
-          canEdit={canEdit}
-          placeholder="List objectives..."
-        />
-      </CollapsibleSection>
 
       <CollapsibleSection
         title="KPIs"
         defaultOpen
         badge={
-          <Badge variant="secondary" className="ml-1 text-xs">
+          <Badge
+            variant="outline"
+            className="ml-1 border-slate-200 bg-slate-50 text-xs text-slate-600"
+          >
             {account.kpis.length}
           </Badge>
         }
@@ -515,129 +521,180 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
         />
       </CollapsibleSection>
 
-      <CollapsibleSection title="Implementation Plan" defaultOpen={false}>
-        <InlineEditField
-          value={account.implementationPlan}
-          onSave={saveField("implementationPlan")}
-          canEdit={canEdit}
-          placeholder="Outline the implementation plan..."
-        />
-      </CollapsibleSection>
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          <CollapsibleSection title="Solution Summary" defaultOpen>
+            <InlineEditField
+              value={account.currentSolution}
+              onSave={saveField("currentSolution")}
+              canEdit={canEdit}
+              placeholder="Describe the current solution..."
+            />
+          </CollapsibleSection>
 
-      <CollapsibleSection title="Roadblocks" defaultOpen={false}>
-        <InlineEditField
-          value={account.roadblocks}
-          onSave={saveField("roadblocks")}
-          canEdit={canEdit}
-          placeholder="Note any roadblocks..."
-        />
-      </CollapsibleSection>
+          <CollapsibleSection title="Current State" defaultOpen>
+            <InlineEditField
+              value={account.currentState}
+              onSave={saveField("currentState")}
+              canEdit={canEdit}
+              placeholder="Describe the current state..."
+            />
+          </CollapsibleSection>
 
-      <CollapsibleSection
-        title="Key Contacts"
-        defaultOpen
-        badge={
-          <Badge variant="secondary" className="ml-1 text-xs">
-            {account.contacts.length}
-          </Badge>
-        }
-      >
-        <ContactsGrid
-          accountId={accountId}
-          contacts={account.contacts}
-          canEdit={canEdit}
-        />
-      </CollapsibleSection>
+          <CollapsibleSection title="Business Goals" defaultOpen>
+            <InlineEditField
+              value={account.businessGoals}
+              onSave={saveField("businessGoals")}
+              canEdit={canEdit}
+              placeholder="Define business goals..."
+            />
+          </CollapsibleSection>
 
-      <CollapsibleSection
-        title="Meeting History"
-        defaultOpen={false}
-        badge={
-          <Badge variant="secondary" className="ml-1 text-xs">
-            {account.meetings.length}
-          </Badge>
-        }
-      >
-        {account.meetings.length === 0 ? (
-          <div className="py-6 text-sm text-muted-foreground">No meetings yet.</div>
-        ) : (
-          <div className="space-y-3">
-            {account.meetings.map((meeting) => (
-              <div
-                key={meeting.id}
-                className="flex items-start gap-3 rounded-lg border border-gray-100 p-3"
+          <CollapsibleSection title="Objectives" defaultOpen>
+            <InlineEditField
+              value={account.objectives}
+              onSave={saveField("objectives")}
+              canEdit={canEdit}
+              placeholder="List objectives..."
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Implementation Plan" defaultOpen={false}>
+            <InlineEditField
+              value={account.implementationPlan}
+              onSave={saveField("implementationPlan")}
+              canEdit={canEdit}
+              placeholder="Outline the implementation plan..."
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Roadblocks" defaultOpen={false}>
+            <InlineEditField
+              value={account.roadblocks}
+              onSave={saveField("roadblocks")}
+              canEdit={canEdit}
+              placeholder="Note any roadblocks..."
+            />
+          </CollapsibleSection>
+        </div>
+
+        <div className="space-y-6">
+          <CollapsibleSection
+            title="Key Contacts"
+            defaultOpen
+            badge={
+              <Badge
+                variant="outline"
+                className="ml-1 border-slate-200 bg-slate-50 text-xs text-slate-600"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <CalendarDays className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                            <Link
-                              href={`/accounts/${accountId}/meetings/${meeting.id}`}
-                              className="truncate font-medium text-sm text-slate-900 hover:text-blue-600"
-                            >
-                              {meeting.title}
-                            </Link>
-                            <span className="shrink-0 text-xs text-muted-foreground">
-                              {formatDate(meeting.meetingDate)}
-                            </span>
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
-                    {meeting.duration != null && (
-                      <span>{meeting.duration} min</span>
-                    )}
-                    {meeting.participants?.length > 0 && (
-                      <span>
-                        {meeting.participants.length} participant
-                        {meeting.participants.length !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-                  {meeting.summaryAI && (
-                    <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                      {meeting.summaryAI.length > 150
-                        ? `${meeting.summaryAI.slice(0, 150)}...`
-                        : meeting.summaryAI}
-                    </p>
-                  )}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {meeting.syncedToVitally && (
-                      <Badge variant="outline" className="text-[10px]">
-                        Synced to Vitally
-                      </Badge>
-                    )}
-                    {meeting.extractedKPIs && (
-                      <Badge variant="outline" className="text-[10px]">
-                        KPIs Extracted
-                      </Badge>
-                    )}
-                    {meeting.recordingUrl && (
-                      <a
-                        href={meeting.recordingUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Recording
-                      </a>
-                    )}
-                  </div>
-                </div>
+                {account.contacts.length}
+              </Badge>
+            }
+          >
+            <ContactsGrid
+              accountId={accountId}
+              contacts={account.contacts}
+              canEdit={canEdit}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Recent Meetings"
+            defaultOpen={false}
+            badge={
+              <Badge
+                variant="outline"
+                className="ml-1 border-slate-200 bg-slate-50 text-xs text-slate-600"
+              >
+                {account.meetings.length}
+              </Badge>
+            }
+          >
+            {account.meetings.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 py-10 text-center text-sm text-muted-foreground">
+                No meetings yet.
               </div>
-            ))}
-          </div>
-        )}
-        {account.meetings.length > 0 && (
-          <div className="mt-4 border-t pt-4">
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/accounts/${accountId}/meetings`}>
-                View Full Meeting Archive
-              </Link>
-            </Button>
-          </div>
-        )}
-      </CollapsibleSection>
+            ) : (
+              <div className="space-y-3">
+                {account.meetings.map((meeting) => (
+                  <div
+                    key={meeting.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/accounts/${accountId}/meetings/${meeting.id}`}
+                          className="truncate text-sm font-medium text-slate-900 hover:text-slate-700"
+                        >
+                          {meeting.title}
+                        </Link>
+                        <span className="shrink-0 text-xs text-slate-400">
+                          {formatDate(meeting.meetingDate)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        {meeting.duration != null && <span>{meeting.duration} min</span>}
+                        {meeting.participants?.length > 0 && (
+                          <span>
+                            {meeting.participants.length} participant
+                            {meeting.participants.length !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                      {meeting.summaryAI && (
+                        <p className="text-sm leading-relaxed text-slate-600">
+                          {meeting.summaryAI.length > 150
+                            ? `${meeting.summaryAI.slice(0, 150)}...`
+                            : meeting.summaryAI}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {meeting.syncedToVitally && (
+                          <Badge
+                            variant="outline"
+                            className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
+                          >
+                            Synced to Vitally
+                          </Badge>
+                        )}
+                        {meeting.extractedKPIs && (
+                          <Badge
+                            variant="outline"
+                            className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
+                          >
+                            KPIs Extracted
+                          </Badge>
+                        )}
+                        {meeting.recordingUrl && (
+                          <a
+                            href={meeting.recordingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:text-slate-900"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Recording
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {account.meetings.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/accounts/${accountId}/meetings`}>
+                    View Full Meeting Archive
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CollapsibleSection>
+        </div>
+      </div>
     </div>
   );
 }
@@ -647,7 +704,7 @@ export function AccountOverview({ accountId }: AccountOverviewProps) {
 function AccountSkeleton() {
   return (
     <div className="space-y-6">
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
+      <Card className="rounded-3xl border-slate-200 shadow-none">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <Skeleton className="h-14 w-14 rounded-full" />
@@ -664,7 +721,7 @@ function AccountSkeleton() {
         </CardContent>
       </Card>
       {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={i} className="rounded-2xl border-gray-100 shadow-sm">
+        <Card key={i} className="rounded-3xl border-slate-200 shadow-none">
           <CardContent className="p-6">
             <div className="space-y-3">
               <Skeleton className="h-5 w-36" />

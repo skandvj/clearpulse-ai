@@ -40,16 +40,46 @@ const SOURCE_LABELS: Record<SignalSource, string> = {
 };
 
 const SOURCE_COLORS: Record<SignalSource, string> = {
-  SLACK: "#4A154B",
-  FATHOM: "#FF6B35",
-  AM_MEETING: "#8B5CF6",
-  VITALLY: "#7C3AED",
-  SALESFORCE: "#00A1E0",
-  PERSONAS: "#059669",
-  SHAREPOINT: "#0078D4",
-  JIRA: "#0052CC",
-  GOOGLE_DRIVE: "#4285F4",
+  SLACK: "#0F172A",
+  FATHOM: "#1E293B",
+  AM_MEETING: "#334155",
+  VITALLY: "#475569",
+  SALESFORCE: "#64748B",
+  PERSONAS: "#94A3B8",
+  SHAREPOINT: "#CBD5E1",
+  JIRA: "#111827",
+  GOOGLE_DRIVE: "#3B82F6",
 };
+
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number; color?: string }>;
+  label?: string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+      {label ? <p className="text-xs font-medium text-slate-500">{label}</p> : null}
+      <div className="mt-1 space-y-1">
+        {payload.map((item) => (
+          <div key={`${item.name}-${item.value}`} className="flex items-center gap-2 text-xs">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: item.color ?? "#0F172A" }}
+            />
+            <span className="text-slate-600">{item.name}</span>
+            <span className="font-medium text-slate-900">{item.value ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function KpiHealthBreakdownChart({
   data,
@@ -81,11 +111,11 @@ export function KpiHealthBreakdownChart({
               <Cell key={slice.status} fill={slice.color} />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip content={<ChartTooltip />} />
           <Legend
             verticalAlign="bottom"
             formatter={(value) => value}
-            wrapperStyle={{ fontSize: "12px", paddingTop: "16px" }}
+            wrapperStyle={{ fontSize: "12px", paddingTop: "16px", color: "#475569" }}
           />
         </PieChart>
       </ResponsiveContainer>
@@ -113,23 +143,23 @@ export function SourceActivityChart({ data }: SourceActivityChartProps) {
           data={data}
           margin={{ top: 8, right: 12, left: -24, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
           <XAxis
             dataKey="dateLabel"
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 12, fill: "#6B7280" }}
+            tick={{ fontSize: 12, fill: "#64748B" }}
           />
           <YAxis
             allowDecimals={false}
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 12, fill: "#6B7280" }}
+            tick={{ fontSize: 12, fill: "#64748B" }}
           />
-          <Tooltip />
+          <Tooltip content={<ChartTooltip />} />
           <Legend
             verticalAlign="bottom"
-            wrapperStyle={{ fontSize: "12px", paddingTop: "16px" }}
+            wrapperStyle={{ fontSize: "12px", paddingTop: "16px", color: "#475569" }}
             formatter={(value) => SOURCE_LABELS[value as SignalSource] ?? value}
           />
           {activeSources.map((source) => (

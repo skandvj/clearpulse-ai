@@ -83,7 +83,7 @@ export function AuditLogViewer() {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
+      <Card className="rounded-3xl border-slate-200 shadow-none">
         <CardContent className="space-y-4 p-6">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-slate-600">{summary} events</p>
@@ -101,7 +101,7 @@ export function AuditLogViewer() {
                 <SelectValue placeholder="All users" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Users</SelectItem>
+                <SelectItem value="ALL">All users</SelectItem>
                 {(logsQuery.data?.filterOptions.users ?? []).map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name || user.email}
@@ -121,7 +121,7 @@ export function AuditLogViewer() {
                 <SelectValue placeholder="All actions" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Actions</SelectItem>
+                <SelectItem value="ALL">All actions</SelectItem>
                 {(logsQuery.data?.filterOptions.actions ?? []).map((value) => (
                   <SelectItem key={value} value={value}>
                     {value}
@@ -148,7 +148,7 @@ export function AuditLogViewer() {
               }}
             />
 
-            <Button asChild variant="outline" className="gap-2">
+            <Button asChild className="gap-2">
               <a href={buildExportUrl(filters)}>
                 <Download className="h-4 w-4" />
                 Export CSV

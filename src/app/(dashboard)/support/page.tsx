@@ -72,29 +72,31 @@ const troubleshootingNotes = [
 export default function SupportPage() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-none">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
             Support
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Simple guidance for using ClearPulse, understanding what the AI is
-            doing behind the scenes, and explaining the product to both technical
-            and non-technical teammates.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/integrations">Open Integrations</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/admin/sync">Open Sync Console</Link>
-          </Button>
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              Simple guidance for using ClearPulse, understanding what the AI is
+              doing behind the scenes, and explaining the product to both technical
+              and non-technical teammates.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/integrations">Open Integrations</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/admin/sync">Open Sync Console</Link>
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
             <CardTitle>What ClearPulse Does</CardTitle>
           </CardHeader>
@@ -113,9 +115,9 @@ export default function SupportPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
-            <CardTitle>How Recent Is The Data?</CardTitle>
+            <CardTitle>How Recent The Data Is</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm leading-6 text-slate-700">
             {freshnessNotes.map((note) => (
@@ -125,7 +127,7 @@ export default function SupportPage() {
         </Card>
       </div>
 
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
+      <Card className="rounded-3xl border-slate-200 shadow-none">
         <CardHeader>
           <CardTitle>How The Workflow Works</CardTitle>
         </CardHeader>
@@ -133,7 +135,7 @@ export default function SupportPage() {
           {workflowSteps.map((step) => (
             <div
               key={step.title}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
             >
               <h2 className="text-sm font-semibold text-slate-950">
                 {step.title}
@@ -147,7 +149,7 @@ export default function SupportPage() {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
             <CardTitle>What Happens Behind The Scenes</CardTitle>
           </CardHeader>
@@ -170,7 +172,7 @@ export default function SupportPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
             <CardTitle>Page Guide</CardTitle>
           </CardHeader>
@@ -186,7 +188,7 @@ export default function SupportPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
             <CardTitle>Source Logic In Plain Language</CardTitle>
           </CardHeader>
@@ -197,7 +199,7 @@ export default function SupportPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
             <CardTitle>Troubleshooting</CardTitle>
           </CardHeader>

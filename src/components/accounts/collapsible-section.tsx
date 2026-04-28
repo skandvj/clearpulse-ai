@@ -23,22 +23,22 @@ export function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <Card>
+    <Card className="rounded-3xl border-slate-200 shadow-none">
       <CardHeader
-        className="cursor-pointer select-none pb-4"
+        className="cursor-pointer select-none px-6 pb-4 pt-5"
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {Icon ? <Icon className="h-4 w-4 text-muted-foreground" /> : null}
-            <CardTitle className="text-base font-semibold text-slate-900">
+          <div className="flex items-center gap-2.5">
+            {Icon ? <Icon className="h-4 w-4 text-slate-400" /> : null}
+            <CardTitle className="text-[15px] font-semibold text-slate-900">
               {title}
             </CardTitle>
             {badge}
           </div>
           <ChevronDown
             className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform duration-200",
+              "h-4 w-4 text-slate-400 transition-transform duration-200",
               isOpen && "rotate-180"
             )}
           />
@@ -50,7 +50,7 @@ export function CollapsibleSection({
           isOpen ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
         )}
       >
-        <CardContent className="pt-0">{children}</CardContent>
+        <CardContent className="px-6 pb-6 pt-0">{children}</CardContent>
       </div>
     </Card>
   );

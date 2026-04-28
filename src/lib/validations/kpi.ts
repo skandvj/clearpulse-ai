@@ -27,6 +27,7 @@ const kpiStatusValues = ["ON_TRACK", "AT_RISK", "ACHIEVED", "MISSED"] as const;
 const healthStatusValues = ["HEALTHY", "AT_RISK", "CRITICAL", "UNKNOWN"] as const;
 
 const healthTrendValues = ["IMPROVING", "STABLE", "DECLINING"] as const;
+const kpiClassificationValues = ["DOCUMENTED", "WORKING", "SUGGESTED", "MANUAL"] as const;
 
 export const createKPISchema = z.object({
   metricName: z.string().min(1, "Metric name is required").max(255),
@@ -52,6 +53,8 @@ export const updateKPISchema = z.object({
   healthStatus: z.enum(healthStatusValues).optional(),
   healthNarrative: z.string().nullable().optional(),
   healthTrend: z.enum(healthTrendValues).optional(),
+  classificationOverride: z.enum(kpiClassificationValues).nullable().optional(),
+  classificationNote: z.string().nullable().optional(),
 });
 
 export type CreateKPIInput = z.infer<typeof createKPISchema>;

@@ -1,0 +1,27 @@
+field_name,description,allowed_values,required,applies_to,notes
+item_id,Unique identifier for the extracted item,string,YES,all,Can be generated after extraction
+account_id,Account the item belongs to,string,YES,all,Always required for downstream KPI logic
+source,Originating system,FATHOM|SLACK|VITALLY|SALESFORCE|JIRA|SHAREPOINT|GOOGLE_DRIVE|AM_MEETING|PERSONAS,YES,all,Source-agnostic framework starts here
+source_record_id,Original source record identifier,string,NO,all,Meeting ID message ID note ID issue ID etc
+evidence_excerpt,Short exact supporting quote or normalized snippet,string,YES,all,Should stay close to source wording
+speaker_name,Best available speaker or author label,string,NO,all,May be unknown or inferred for meetings
+speaker_confidence,Confidence in speaker attribution,exact|inferred|unknown,YES,all,Important for transcript-derived evidence
+item_type,Primary evidence item classification,KPI_CANDIDATE|CUSTOMER_GOAL|BLOCKER|ACTION_ITEM|DECISION|MILESTONE|RISK_SIGNAL|FEATURE_REQUEST|GENERAL_CONTEXT|HEALTH_SIGNAL|INTERNAL_ONLY,YES,all,Universal item taxonomy
+normalized_title,Short normalized label,string,YES,all,Used for grouping deduping and reporting
+description,Plain language explanation,string,YES,all,Human-readable interpretation of the item
+business_area,Primary business area,ADOPTION|EFFICIENCY|DEFLECTION|REVENUE|RETENTION|SATISFACTION|IMPLEMENTATION|SUPPORT|EXPANSION|CUSTOM,YES,all,Maps item to business lens before KPI promotion
+customer_outcome_related,Whether this item directly affects customer success outcome,yes|no|partial,YES,all,One of the strongest KPI guardrails
+measurable,Whether the item can be measured over time,yes|no|partial,YES,all,Required for KPI promotion logic
+current_value,Current metric state if known,string,NO,all,Can be numeric or text
+target_value,Target metric state if known,string,NO,all,Can be numeric or text
+unit,Measurement unit if any,percent|days|hours|tickets|usd|seats|count|ratio|score|other|blank,NO,all,Blank when not applicable
+time_bound,Whether there is a deadline or timing expectation,yes|no,YES,all,Useful for milestones and urgency
+owner,Who appears to own the item,customer|internal|shared|unknown,YES,all,Separates customer KPI from internal task
+customer_confirmed,Whether the customer explicitly confirmed the item,yes|no|unclear,YES,all,Distinguishes committed from inferred or suggested items
+system_of_record_available,Whether the same item exists in a structured system of record,yes|no|unclear,YES,all,Helps map committed KPI logic
+repeat_signal_likely,Whether the item is likely to appear again across other signals,yes|no|unclear,YES,all,Helps confidence and KPI promotion
+confidence_score,Overall extraction confidence score,1|2|3|4|5,YES,all,Simple confidence scale for review workflows
+should_promote_to_kpi,First-pass KPI promotion decision,yes|no|review,YES,all,Set by policy rules rather than source alone
+kpi_type,If promoted what KPI type it should become,committed|confirmed_working|working|suggested|na,YES,all,Use na when not a KPI
+final_classification,Final normalized output class,COMMITTED_KPI|CONFIRMED_WORKING_KPI|WORKING_KPI|SUGGESTED_KPI|BLOCKER|MILESTONE|HEALTH_SIGNAL|CONTEXT_ONLY|FEATURE_REQUEST|ACTION_ITEM|DECISION|INTERNAL_ONLY,YES,all,The class that the product should store or display
+reason,Why the item was classified this way,string,YES,all,Required for explainability and later evaluation

@@ -2,10 +2,10 @@ import {
   LayoutDashboard,
   Building2,
   Users,
-  Settings,
   Plug,
   RefreshCw,
   ClipboardList,
+  SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react";
 import { Role } from "@prisma/client";
@@ -56,9 +56,9 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
-    label: "Settings",
-    href: "/admin/integrations",
-    icon: Settings,
+    label: "KPI Framework",
+    href: "/admin/kpi-framework",
+    icon: SlidersHorizontal,
     roles: ["ADMIN"],
   },
 ];

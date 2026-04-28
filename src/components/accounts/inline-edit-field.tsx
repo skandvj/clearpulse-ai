@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Check, X, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -59,27 +59,10 @@ export function InlineEditField({
           disabled={isSaving}
         />
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="gap-1.5"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Check className="h-3.5 w-3.5" />
-            )}
-            Save
+          <Button size="sm" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className="gap-1.5"
-          >
-            <X className="h-3.5 w-3.5" />
+          <Button size="sm" variant="outline" onClick={handleCancel} disabled={isSaving}>
             Cancel
           </Button>
         </div>
@@ -88,23 +71,23 @@ export function InlineEditField({
   }
 
   return (
-    <div className="group flex items-start gap-2">
+    <div className="group flex items-start gap-3">
       <p
         className={cn(
           "flex-1 whitespace-pre-wrap text-sm leading-relaxed",
-          value ? "text-foreground" : "text-muted-foreground italic"
+          value ? "text-slate-700" : "text-slate-400"
         )}
       >
         {value || placeholder}
       </p>
       {canEdit && (
         <Button
-          size="icon"
+          size="sm"
           variant="ghost"
-          className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-7 shrink-0 px-2 text-xs text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
           onClick={handleEdit}
         >
-          <Pencil className="h-3.5 w-3.5" />
+          Edit
         </Button>
       )}
     </div>

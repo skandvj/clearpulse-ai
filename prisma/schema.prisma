@@ -24,6 +24,7 @@ model User {
   auditLogs                  AuditLog[]
   integrationSettingsUpdated IntegrationSetting[] @relation("IntegrationSettingUpdatedBy")
   aiSettingsUpdated          AiSetting[]          @relation("AISettingUpdatedBy")
+  kpiFrameworkSettingsUpdated KpiFrameworkSetting[] @relation("KpiFrameworkSettingUpdatedBy")
 }
 
 model Session {
@@ -123,6 +124,8 @@ model ClientKPI {
   healthNarrative String?       @db.Text
   healthTrend     HealthTrend   @default(STABLE)
   lastScoredAt    DateTime?
+  classificationOverride KPIClassificationType?
+  classificationNote String?    @db.Text
   videoTimestamp  Int?
   videoClipUrl    String?
   notes           String?       @db.Text
@@ -130,6 +133,13 @@ model ClientKPI {
   updatedAt       DateTime      @updatedAt
   history         KPIHistory[]
   evidence        KPIEvidence[]
+}
+
+enum KPIClassificationType {
+  DOCUMENTED
+  WORKING
+  SUGGESTED
+  MANUAL
 }
 
 model KPIEvidence {
@@ -263,6 +273,16 @@ model AiSetting {
   updatedById    String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model KpiFrameworkSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  updatedBy   User?    @relation("KpiFrameworkSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model SyncJob {

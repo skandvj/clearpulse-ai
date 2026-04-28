@@ -87,7 +87,7 @@ function JobStatusBadge({
 }) {
   if (status === "COMPLETED") {
     return (
-      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+      <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
         Completed
       </Badge>
     );
@@ -95,7 +95,7 @@ function JobStatusBadge({
 
   if (status === "RUNNING") {
     return (
-      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+      <Badge className="border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50">
         Running
       </Badge>
     );
@@ -103,14 +103,14 @@ function JobStatusBadge({
 
   if (status === "FAILED") {
     return (
-      <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+      <Badge className="border border-red-200 bg-red-50 text-red-700 hover:bg-red-50">
         Failed
       </Badge>
     );
   }
 
   return (
-    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+    <Badge className="border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50">
       Pending
     </Badge>
   );
@@ -234,15 +234,17 @@ export function AdminSyncConsole() {
 
   return (
     <div className="space-y-6">
-      <div className="text-sm text-slate-600">
-        {jobsQuery.data?.queueMode === "queued" ? "Queued" : "Inline"} mode ·{" "}
-        {jobsQuery.data?.summary.pending ?? 0} pending ·{" "}
-        {jobsQuery.data?.summary.running ?? 0} running ·{" "}
-        {jobsQuery.data?.summary.failed ?? 0} failed
-      </div>
+      <Card className="rounded-3xl border-slate-200 shadow-none">
+        <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm text-slate-600">
+          <span>{jobsQuery.data?.queueMode === "queued" ? "Queued" : "Inline"} mode</span>
+          <span>{jobsQuery.data?.summary.pending ?? 0} pending</span>
+          <span>{jobsQuery.data?.summary.running ?? 0} running</span>
+          <span>{jobsQuery.data?.summary.failed ?? 0} failed</span>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
             <CardTitle className="text-base font-semibold">Account sync</CardTitle>
           </CardHeader>
@@ -275,10 +277,10 @@ export function AdminSyncConsole() {
                     <SelectValue placeholder="All sources" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">All Sources</SelectItem>
+                    <SelectItem value="ALL">All sources</SelectItem>
                     {SOURCES.map((source) => (
                       <SelectItem key={source} value={source}>
-                        {source.replace(/_/g, " ")}
+                        {source.replace(/_/g, " ").toLowerCase()}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -299,7 +301,7 @@ export function AdminSyncConsole() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader>
             <CardTitle className="text-base font-semibold">Source sweep</CardTitle>
           </CardHeader>
@@ -316,7 +318,7 @@ export function AdminSyncConsole() {
                 <SelectContent>
                   {SOURCES.map((source) => (
                     <SelectItem key={source} value={source}>
-                      {source.replace(/_/g, " ")}
+                      {source.replace(/_/g, " ").toLowerCase()}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -335,7 +337,7 @@ export function AdminSyncConsole() {
         </Card>
       </div>
 
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
+      <Card className="rounded-3xl border-slate-200 shadow-none">
         <CardHeader className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <CardTitle className="text-base font-semibold">Jobs</CardTitle>
 
@@ -351,12 +353,12 @@ export function AdminSyncConsole() {
                 <SelectValue placeholder="All sources" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Sources</SelectItem>
-                {SOURCES.map((source) => (
-                  <SelectItem key={source} value={source}>
-                    {source.replace(/_/g, " ")}
-                  </SelectItem>
-                ))}
+                  <SelectItem value="ALL">All sources</SelectItem>
+                  {SOURCES.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {source.replace(/_/g, " ").toLowerCase()}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
 
@@ -373,7 +375,7 @@ export function AdminSyncConsole() {
               <SelectContent>
                 {STATUS_OPTIONS.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status === "ALL" ? "All Statuses" : status.toLowerCase()}
+                    {status === "ALL" ? "All statuses" : status.toLowerCase()}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -414,7 +416,7 @@ export function AdminSyncConsole() {
                         {job.account ? (
                           <Link
                             href={`/accounts/${job.account.id}`}
-                            className="font-medium text-slate-900 hover:text-blue-600"
+                            className="font-medium text-slate-900 hover:text-slate-700"
                           >
                             {job.account.name}
                           </Link>

@@ -35,6 +35,7 @@ ClearPulse helps teams:
 If you want the operational guide for logging in, connecting APIs, configuring the webhook, and running sync/extract/score workflows, start here:
 
 - [Complete Platform Guide](docs/complete-platform-guide.md)
+- [KPI Extraction Framework](docs/kpi-framework/README.md)
 - [Platform Usage and Integrations](docs/platform-usage-and-integrations.md)
 - [Product Architecture and AI Flow](docs/product-architecture-and-ai-flow.md)
 

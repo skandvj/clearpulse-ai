@@ -1,0 +1,25 @@
+example_id,source,example_text,item_type_expected,customer_outcome_related,measurable,customer_confirmed,system_of_record_available,repeat_signal_likely,should_promote_to_kpi,kpi_type,final_classification,why
+E1,SALESFORCE,Reduce onboarding time from 14 days to 3 days,KPI_CANDIDATE,yes,yes,yes,yes,unclear,yes,committed,COMMITTED_KPI,Explicit documented metric in a system of record
+E2,VITALLY,Success plan says achieve 80 percent workflow automation in phase one,KPI_CANDIDATE,yes,yes,yes,yes,unclear,yes,committed,COMMITTED_KPI,Formal documented KPI with target
+E3,FATHOM,We need onboarding time reduced to 3 days before broader rollout,KPI_CANDIDATE,yes,yes,yes,no,yes,yes,confirmed_working,CONFIRMED_WORKING_KPI,Customer-confirmed measurable success condition
+E4,FATHOM,SSO-based routing must be live before rollout,BLOCKER,yes,partial,yes,no,yes,review,working,WORKING_KPI,Success-condition blocker that may need KPI review
+E5,SLACK,Customer asked again when SSO-based auto-routing will be available,KPI_CANDIDATE,yes,partial,no,no,yes,review,suggested,SUGGESTED_KPI,Useful corroboration but still needs stronger measurable framing
+E6,JIRA,Four open blockers are delaying rollout,BLOCKER,partial,no,unclear,no,yes,no,na,BLOCKER,Operational blocker not a KPI by default
+E7,FATHOM,Customer is happy with progress,GENERAL_CONTEXT,no,no,unclear,no,no,no,na,CONTEXT_ONLY,Positive sentiment but not measurable
+E8,SLACK,Need better reporting for leadership,CUSTOMER_GOAL,partial,no,unclear,no,yes,review,suggested,SUGGESTED_KPI,Important but too vague until measurable
+E9,FATHOM,If adoption reaches 80 percent we will expand to the EU team,KPI_CANDIDATE,yes,yes,yes,no,yes,yes,confirmed_working,CONFIRMED_WORKING_KPI,Measurable expansion threshold tied to customer outcome
+E10,VITALLY,NPS improved from 6 point 8 to 8 point 1,KPI_CANDIDATE,yes,yes,yes,yes,unclear,yes,committed,COMMITTED_KPI,Structured measurable satisfaction metric
+E11,SALESFORCE,Average first response time is now under 30 minutes,KPI_CANDIDATE,yes,yes,yes,yes,unclear,yes,committed,COMMITTED_KPI,Explicit measurable efficiency metric
+E12,FATHOM,Launch the pilot by end of Q2,MILESTONE,partial,partial,yes,no,unclear,review,suggested,MILESTONE,Time-bound customer milestone not automatically a KPI
+E13,AM_MEETING,Customer wants 95 percent completion of manager training by launch,KPI_CANDIDATE,yes,yes,yes,no,yes,yes,confirmed_working,CONFIRMED_WORKING_KPI,Clear measurable enablement KPI
+E14,SLACK,Rollout blocked until security review completes,BLOCKER,partial,no,unclear,no,yes,no,na,BLOCKER,Blocker only unless team explicitly treats it as success criterion KPI
+E15,FATHOM,Reduce manual triage by 50 percent through auto-routing,KPI_CANDIDATE,yes,yes,yes,no,yes,yes,confirmed_working,CONFIRMED_WORKING_KPI,Strong measurable business outcome discussed in workflow
+E16,VITALLY,Renewal risk increased because adoption is low,HEALTH_SIGNAL,partial,no,unclear,no,yes,no,na,HEALTH_SIGNAL,Useful for health but not KPI by itself
+E17,FATHOM,Customer says implementation took longer than expected,GENERAL_CONTEXT,partial,no,unclear,no,unclear,no,na,CONTEXT_ONLY,Good context but weak KPI evidence
+E18,SHAREPOINT,QBR document says target is 40 percent ticket deflection,KPI_CANDIDATE,yes,yes,yes,yes,unclear,yes,committed,COMMITTED_KPI,Documented measurable KPI in account artifact
+E19,GOOGLE_DRIVE,Success doc says reduce approval cycle from 5 days to 1 day,KPI_CANDIDATE,yes,yes,yes,yes,unclear,yes,committed,COMMITTED_KPI,Formal documented customer outcome
+E20,PERSONAS,Enterprise accounts require faster security review cycles,GENERAL_CONTEXT,partial,no,unclear,no,unclear,no,na,CONTEXT_ONLY,Useful context for scoring but not account KPI
+E21,FATHOM,Faster approvals are required before broader adoption can happen,CUSTOMER_GOAL,yes,partial,yes,no,yes,review,suggested,SUGGESTED_KPI,Likely KPI candidate but still needs measurable framing
+E22,SLACK,Internal team needs to update the playbook before next steering call,INTERNAL_ONLY,no,no,no,no,no,no,na,INTERNAL_ONLY,Internal task only
+E23,JIRA,Expansion cannot proceed until data residency requirement is solved,BLOCKER,yes,partial,unclear,no,yes,review,working,WORKING_KPI,Could be elevated if treated as explicit success criterion
+E24,SALESFORCE,Customer contracted for 200 expansion seats after pilot success,KPI_CANDIDATE,yes,yes,yes,yes,unclear,yes,committed,COMMITTED_KPI,Commercial KPI with clear source of truth

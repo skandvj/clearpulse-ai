@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
-  getSortedRowModel,
   type ColumnDef,
   type SortingState,
   flexRender,
@@ -78,10 +77,18 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 const TIER_STYLES: Record<string, string> = {
-  ENTERPRISE: "bg-violet-50 text-violet-700 border-violet-200",
-  GROWTH: "bg-blue-50 text-blue-700 border-blue-200",
-  STARTER: "bg-gray-50 text-gray-600 border-gray-200",
+  ENTERPRISE: "border-slate-200 bg-slate-50 text-slate-700",
+  GROWTH: "border-slate-200 bg-slate-50 text-slate-700",
+  STARTER: "border-slate-200 bg-slate-50 text-slate-700",
 };
+
+const ACCOUNT_SORT_OPTIONS = [
+  { value: "name", label: "Account name" },
+  { value: "healthScore", label: "Health score" },
+  { value: "lastSyncedAt", label: "Last synced" },
+  { value: "kpiCount", label: "KPI count" },
+  { value: "tier", label: "Tier" },
+] as const;
 
 // ── Custom debounce hook ─────────────────────────────────────────────────────
 
@@ -262,15 +269,19 @@ export default function AccountsPage() {
   const debouncedSearch = useDebounce(searchInput, 300);
   const [tierFilter, setTierFilter] = useState<Tier | "">("");
   const [statusFilter, setStatusFilter] = useState<HealthStatus | "">("");
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const activeSort = sorting[0] ?? { id: "name", desc: false };
 
   const { data: accounts, isLoading } = useAccounts({
     search: debouncedSearch || undefined,
     tier: tierFilter || undefined,
     healthStatus: statusFilter || undefined,
-    sortBy: sorting[0]?.id,
-    sortOrder: sorting[0]?.desc ? "desc" : "asc",
+    sortBy: activeSort.id,
+    sortOrder: activeSort.desc ? "desc" : "asc",
   });
 
   const columns = useColumns();
@@ -279,9 +290,13 @@ export default function AccountsPage() {
     data: accounts ?? [],
     columns,
     state: { sorting },
-    onSortingChange: setSorting,
+    manualSorting: true,
+    onSortingChange: (updater) => {
+      const next =
+        typeof updater === "function" ? updater(sorting) : updater;
+      setSorting(next.length > 0 ? [next[0]] : [{ id: "name", desc: false }]);
+    },
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   });
 
   const hasFilters = !!(debouncedSearch || tierFilter || statusFilter);
@@ -294,63 +309,135 @@ export default function AccountsPage() {
   return (
     <PageWrapper>
       <div className="space-y-6">
-        <div className="flex items-center justify-between rounded-[24px] border border-[#e3d8ca] bg-white p-7 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+        <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-none">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-gray-900">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">
               Accounts
             </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Review portfolio health and open each account for detailed context.
+            </p>
           </div>
           {canEdit && (
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button variant="outline" onClick={() => setDialogOpen(true)}>
               Add Account
             </Button>
           )}
         </div>
 
-        <div className="flex flex-col gap-3 rounded-[28px] border border-white/70 bg-white/72 p-4 shadow-sm sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Search by name or domain…"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-9"
-            />
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-none">
+          <div className="mb-3 flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-slate-500 hover:text-slate-900"
+              onClick={() => {
+                setSearchInput("");
+                setTierFilter("");
+                setStatusFilter("");
+                setSorting([{ id: "name", desc: false }]);
+              }}
+            >
+              Reset
+            </Button>
           </div>
-          <Select
-            value={tierFilter}
-            onValueChange={(v) => setTierFilter(v === "ALL" ? "" : (v as Tier))}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All tiers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All tiers</SelectItem>
-              <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
-              <SelectItem value="GROWTH">Growth</SelectItem>
-              <SelectItem value="STARTER">Starter</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={statusFilter}
-            onValueChange={(v) =>
-              setStatusFilter(v === "ALL" ? "" : (v as HealthStatus))
-            }
-          >
-            <SelectTrigger className="w-[170px]">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
-              <SelectItem value="HEALTHY">Healthy</SelectItem>
-              <SelectItem value="AT_RISK">At Risk</SelectItem>
-              <SelectItem value="CRITICAL">Critical</SelectItem>
-              <SelectItem value="UNKNOWN">Unknown</SelectItem>
-            </SelectContent>
-          </Select>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <div className="space-y-1.5 xl:col-span-2">
+              <p className="text-xs font-medium text-slate-500">Search</p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Search by name or domain"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-slate-500">Tier</p>
+              <Select
+                value={tierFilter}
+                onValueChange={(v) => setTierFilter(v === "ALL" ? "" : (v as Tier))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All tiers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All tiers</SelectItem>
+                  <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
+                  <SelectItem value="GROWTH">Growth</SelectItem>
+                  <SelectItem value="STARTER">Starter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-slate-500">Health</p>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) =>
+                  setStatusFilter(v === "ALL" ? "" : (v as HealthStatus))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All health states" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All health states</SelectItem>
+                  <SelectItem value="HEALTHY">Healthy</SelectItem>
+                  <SelectItem value="AT_RISK">At risk</SelectItem>
+                  <SelectItem value="CRITICAL">Critical</SelectItem>
+                  <SelectItem value="UNKNOWN">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-slate-500">Sort by</p>
+              <Select
+                value={activeSort.id}
+                onValueChange={(value) =>
+                  setSorting([{ id: value, desc: activeSort.desc }])
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Account name" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACCOUNT_SORT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-slate-500">Order</p>
+              <Select
+                value={activeSort.desc ? "desc" : "asc"}
+                onValueChange={(value) =>
+                  setSorting([{ id: activeSort.id, desc: value === "desc" }])
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Ascending" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Ascending</SelectItem>
+                  <SelectItem value="desc">Descending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
-        <Card>
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           {isLoading ? (
             <TableSkeleton />
           ) : !accounts?.length ? (
@@ -364,17 +451,17 @@ export default function AccountsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-sm">
+                <thead className="sticky top-0 z-10 bg-slate-50/80 backdrop-blur-sm">
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id} className="border-b border-gray-100">
+                    <tr key={headerGroup.id} className="border-b border-slate-200">
                       {headerGroup.headers.map((header) => {
                         const sortable = header.column.getCanSort();
                         const sorted = header.column.getIsSorted();
                         return (
                           <th
                             key={header.id}
-                            className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 ${
-                              sortable ? "cursor-pointer select-none hover:text-gray-700" : ""
+                            className={`px-6 py-3 text-left text-[11px] font-medium text-slate-500 ${
+                              sortable ? "cursor-pointer select-none hover:text-slate-900" : ""
                             }`}
                             onClick={header.column.getToggleSortingHandler()}
                           >
@@ -398,11 +485,11 @@ export default function AccountsPage() {
                     </tr>
                   ))}
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-slate-100">
                   {table.getRowModel().rows.map((row) => (
                     <tr
                       key={row.id}
-                      className="cursor-pointer transition-colors hover:bg-gray-50/60"
+                      className="cursor-pointer transition-colors hover:bg-slate-50/70"
                       onClick={() => handleRowClick(row.original.id)}
                     >
                       {row.getVisibleCells().map((cell) => (

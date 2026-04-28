@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { HealthStatusBadge } from "@/components/ui/health-badge";
 import { HealthRing } from "@/components/ui/health-ring";
-import { SourceBadge } from "@/components/ui/source-badge";
 import { getServerUser } from "@/lib/auth-helpers";
 import { getDashboardData } from "@/lib/dashboard";
 import { PERMISSIONS, hasPermission } from "@/lib/rbac";
@@ -74,6 +73,14 @@ function getHealthBarClasses(score: number | null): string {
   return "bg-red-500";
 }
 
+function formatSourceLabel(source: string): string {
+  return source
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default async function DashboardPage() {
   const user = await getServerUser();
 
@@ -113,16 +120,19 @@ export default async function DashboardPage() {
   return (
     <PageWrapper>
       <div className="space-y-6">
-        <div className="rounded-[24px] border border-[#e3d8ca] bg-white p-7 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-none">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950">
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-950">
                 Portfolio Dashboard
               </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Monitor account health, signal flow, and the KPI changes that need attention.
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button asChild variant="outline" className="bg-white/80">
+              <Button asChild>
                 <Link href="/accounts">
                   Open Accounts
                 </Link>
@@ -133,13 +143,13 @@ export default async function DashboardPage() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="rounded-3xl border-slate-200 shadow-none">
               <CardContent className="p-6">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-500">
                     {stat.label}
                   </p>
-                  <p className={`mt-3 text-3xl font-bold tracking-tight ${stat.tone}`}>
+                  <p className={`text-3xl font-semibold tracking-tight ${stat.tone}`}>
                     {stat.value}
                   </p>
                 </div>
@@ -149,8 +159,8 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
+          <Card className="rounded-3xl border-slate-200 shadow-none">
+            <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 Portfolio Health Map
               </CardTitle>
@@ -166,7 +176,7 @@ export default async function DashboardPage() {
                     <Link
                       key={account.id}
                       href={`/accounts/${account.id}`}
-                      className="block rounded-2xl border border-slate-100 p-4 transition-all hover:border-blue-200 hover:bg-blue-50/40"
+                      className="block rounded-2xl border border-slate-200 p-4 transition-all hover:border-slate-300 hover:bg-slate-50/80"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
@@ -217,8 +227,8 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="rounded-3xl border-slate-200 shadow-none">
+            <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 KPI Health Breakdown
               </CardTitle>
@@ -230,8 +240,8 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-          <Card>
-            <CardHeader>
+          <Card className="rounded-3xl border-slate-200 shadow-none">
+            <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 Source Signal Activity
               </CardTitle>
@@ -241,8 +251,8 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="rounded-3xl border-slate-200 shadow-none">
+            <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 Recent AI Extractions
               </CardTitle>
@@ -256,13 +266,13 @@ export default async function DashboardPage() {
                 data.recentExtractions.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[24px] border border-slate-100/90 bg-white/55 p-4"
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <Link
                           href={`/accounts/${item.accountId}`}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900 hover:text-blue-600"
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900 hover:text-slate-700"
                         >
                           {item.accountName}
                           <ExternalLink className="h-3.5 w-3.5" />
@@ -277,12 +287,18 @@ export default async function DashboardPage() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Badge
                         variant="outline"
-                        className="border-blue-200 bg-blue-50 text-blue-700"
+                        className="border-slate-200 bg-slate-50 text-slate-600"
                       >
                         AI Extracted
                       </Badge>
                       {item.evidenceSources.map((source) => (
-                        <SourceBadge key={source} source={source} />
+                        <Badge
+                          key={source}
+                          variant="outline"
+                          className="border-slate-200 bg-white text-slate-600"
+                        >
+                          {formatSourceLabel(source)}
+                        </Badge>
                       ))}
                     </div>
 
@@ -296,7 +312,7 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <Card>
+        <Card className="rounded-3xl border-slate-200 shadow-none">
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <CardTitle className="text-base font-semibold">
@@ -304,7 +320,7 @@ export default async function DashboardPage() {
               </CardTitle>
             </div>
 
-            <Button asChild variant="ghost" className="w-fit">
+            <Button asChild className="w-fit">
               <Link href="/accounts">
                 Open full account list
               </Link>
@@ -319,7 +335,7 @@ export default async function DashboardPage() {
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-100 text-sm">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                    <tr className="text-left text-[11px] font-medium text-slate-500">
                       <th className="pb-3 font-medium">Account</th>
                       <th className="pb-3 font-medium">Health</th>
                       <th className="pb-3 font-medium">Critical KPIs</th>
@@ -337,7 +353,7 @@ export default async function DashboardPage() {
                           <div className="space-y-1">
                             <Link
                               href={`/accounts/${account.id}`}
-                              className="font-semibold text-slate-900 hover:text-blue-600"
+                              className="font-semibold text-slate-900 hover:text-slate-700"
                             >
                               {account.name}
                             </Link>
@@ -397,13 +413,13 @@ export default async function DashboardPage() {
                         </td>
                         <td className="py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button asChild variant="outline" size="sm">
+                            <Button asChild size="sm">
                               <Link href={`/accounts/${account.id}`}>View</Link>
                             </Button>
                             {canTriggerSync ? (
                               <SyncTriggerButton
                                 accountId={account.id}
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 className="h-9"
                               />

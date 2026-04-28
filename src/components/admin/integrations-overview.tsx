@@ -164,7 +164,7 @@ function AISettingsCard() {
 
   if (aiSettingsQuery.isLoading) {
     return (
-      <Card>
+      <Card className="rounded-3xl border-slate-200 shadow-none">
         <CardContent className="p-5 text-sm text-slate-500">
           Loading AI settings…
         </CardContent>
@@ -174,7 +174,7 @@ function AISettingsCard() {
 
   if (aiSettingsQuery.error || !aiSettingsQuery.data) {
     return (
-      <Card>
+      <Card className="rounded-3xl border-slate-200 shadow-none">
         <CardContent className="p-5 text-sm text-red-600">
           {aiSettingsQuery.error?.message ?? "Failed to load AI settings"}
         </CardContent>
@@ -202,7 +202,7 @@ function AISettingsCard() {
   };
 
   return (
-    <Card>
+    <Card className="rounded-3xl border-slate-200 shadow-none">
       <CardHeader className="space-y-2 pb-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <CardTitle className="text-lg">AI providers</CardTitle>
@@ -217,7 +217,7 @@ function AISettingsCard() {
             {fields.map((field) => (
               <div
                 key={field.key}
-                className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4"
+                className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
               >
                 <p className="text-sm font-medium text-slate-900">
                   {field.provider}
@@ -289,7 +289,7 @@ function IntegrationCard({
   )}`;
 
   return (
-    <Card>
+    <Card className="rounded-3xl border-slate-200 shadow-none">
       <CardHeader className="space-y-3 pb-4">
         <div className="flex items-center justify-between gap-3">
           <SourceBadge source={integration.source} />
@@ -304,13 +304,13 @@ function IntegrationCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {integration.lastJobError ? (
-          <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {integration.lastJobError}
           </div>
         ) : null}
 
         {!integration.browserConfigurable ? (
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {integration.missingEnv.length > 0
               ? `This source still needs environment or OAuth setup: ${integration.missingEnv.join(", ")}`
               : "This source is configured outside the browser today."}
@@ -425,11 +425,14 @@ export function IntegrationsOverview() {
   const needsSetup = summary.partial + summary.disconnected;
 
   return (
-    <div className="space-y-5">
-      <div className="text-sm text-slate-600">
-        {summary.connected} connected · {needsSetup} need setup ·{" "}
-        {summary.error} errors
-      </div>
+    <div className="space-y-6">
+      <Card className="rounded-3xl border-slate-200 shadow-none">
+        <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm text-slate-600">
+          <span>{summary.connected} connected</span>
+          <span>{needsSetup} need setup</span>
+          <span>{summary.error} errors</span>
+        </CardContent>
+      </Card>
 
       <AISettingsCard />
 

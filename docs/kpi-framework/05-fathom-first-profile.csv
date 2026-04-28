@@ -1,0 +1,11 @@
+profile_id,source,item_type,extract_by_default,used_for_health_scoring,default_promotion_behavior,manual_review_required,notes
+FATHOM_V1,FATHOM,KPI_CANDIDATE,yes,yes,review_to_kpi,yes,Fathom should be strong for working KPI discovery because meetings contain customer goals and success conditions
+FATHOM_V1,FATHOM,CUSTOMER_GOAL,yes,yes,review_to_suggested_kpi,yes,Customer goals often start here before they become formal KPIs
+FATHOM_V1,FATHOM,BLOCKER,yes,yes,keep_as_blocker,yes,Important for health scoring and may become KPI only when explicitly framed as success condition
+FATHOM_V1,FATHOM,ACTION_ITEM,yes,no,never_promote,yes,Useful for meeting follow-up but not KPI
+FATHOM_V1,FATHOM,DECISION,yes,medium,never_promote,yes,Useful account context but not KPI
+FATHOM_V1,FATHOM,MILESTONE,yes,yes,review_to_milestone_or_suggested_kpi,yes,Launch or rollout milestones may matter but should not be auto-promoted
+FATHOM_V1,FATHOM,RISK_SIGNAL,yes,yes,keep_as_health_signal,yes,Important for scoring and narrative without necessarily creating KPI row
+FATHOM_V1,FATHOM,FEATURE_REQUEST,yes,low,never_promote,yes,Feature requests should remain product signals unless explicitly converted into measurable success metric
+FATHOM_V1,FATHOM,GENERAL_CONTEXT,yes,medium,never_promote,yes,Keep for human context and occasional scoring support
+FATHOM_V1,FATHOM,HEALTH_SIGNAL,yes,yes,keep_as_health_signal,yes,Allows meeting-derived risk or positive movement to influence scoring

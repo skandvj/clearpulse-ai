@@ -87,13 +87,13 @@ export default async function MeetingDetailPage({
             </Button>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.14),_transparent_45%),linear-gradient(135deg,_#ffffff,_#f8fbff)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-none">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
                   Meeting Detail
                 </div>
-                <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-slate-950">
+                <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-slate-950">
                   {meeting.title}
                 </h1>
                 <p className="mt-2 text-sm text-slate-600">
@@ -119,7 +119,7 @@ export default async function MeetingDetailPage({
                       href={meeting.recordingUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700"
+                      className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Open Recording
@@ -141,7 +141,7 @@ export default async function MeetingDetailPage({
 
           <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
             <div className="space-y-6">
-              <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <Card className="rounded-3xl border-slate-200 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold">
                     AI Summary
@@ -158,7 +158,7 @@ export default async function MeetingDetailPage({
                 </CardContent>
               </Card>
 
-              <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <Card className="rounded-3xl border-slate-200 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold">
                     Transcript
@@ -168,7 +168,7 @@ export default async function MeetingDetailPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="max-h-[520px] overflow-y-auto rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="max-h-[520px] overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                     <p className="whitespace-pre-wrap text-sm leading-7 text-slate-600">
                       {transcript ||
                         "No transcript has been stored for this meeting yet."}
@@ -179,7 +179,7 @@ export default async function MeetingDetailPage({
             </div>
 
             <div className="space-y-6">
-              <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <Card className="rounded-3xl border-slate-200 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold">
                     Participants
@@ -195,7 +195,7 @@ export default async function MeetingDetailPage({
                       {meeting.participants.map((participant) => (
                         <div
                           key={participant}
-                          className="rounded-xl border border-slate-100 px-3 py-2 text-sm text-slate-600"
+                          className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600"
                         >
                           {participant}
                         </div>
@@ -205,7 +205,7 @@ export default async function MeetingDetailPage({
                 </CardContent>
               </Card>
 
-              <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <Card className="rounded-3xl border-slate-200 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold">
                     Meeting KPIs
@@ -235,7 +235,7 @@ export default async function MeetingDetailPage({
                         return (
                           <div
                             key={kpi.id}
-                            className="rounded-2xl border border-slate-100 p-4"
+                            className="rounded-2xl border border-slate-200 p-4"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
@@ -262,7 +262,7 @@ export default async function MeetingDetailPage({
                                   href={videoHref}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                                  className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-900"
                                 >
                                   <PlayCircle className="h-4 w-4" />
                                   Open Moment
@@ -281,7 +281,7 @@ export default async function MeetingDetailPage({
                 </CardContent>
               </Card>
 
-              <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <Card className="rounded-3xl border-slate-200 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold">
                     Account Context
