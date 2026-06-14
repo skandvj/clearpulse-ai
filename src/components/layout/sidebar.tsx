@@ -80,13 +80,13 @@ export function Sidebar() {
                 href="/dashboard"
                 className="flex min-w-0 flex-1 items-center gap-3 text-[15px] font-semibold tracking-tight text-slate-950"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#0f172a,#2563eb)] text-white shadow-[0_12px_28px_rgba(37,99,235,0.26)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-[18px] shadow-[0_12px_28px_rgba(37,99,235,0.26)]">
                   <Image
-                    src="/favicon.ico"
+                    src="/icon.svg"
                     alt=""
-                    width={22}
-                    height={22}
-                    className="h-5 w-5 shrink-0 rounded-md"
+                    width={44}
+                    height={44}
+                    className="h-11 w-11 shrink-0"
                     unoptimized
                   />
                 </div>
@@ -105,14 +105,14 @@ export function Sidebar() {
                   <TooltipTrigger asChild>
                     <Link
                       href="/dashboard"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#0f172a,#2563eb)] text-white shadow-[0_12px_28px_rgba(37,99,235,0.26)]"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] shadow-[0_12px_28px_rgba(37,99,235,0.26)]"
                     >
                       <Image
-                        src="/favicon.ico"
+                        src="/icon.svg"
                         alt="ClearPulse"
-                        width={22}
-                        height={22}
-                        className="h-5 w-5 rounded-md"
+                        width={44}
+                        height={44}
+                        className="h-11 w-11"
                         unoptimized
                       />
                     </Link>

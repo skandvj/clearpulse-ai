@@ -18,10 +18,13 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ClearPulse — Every signal. Every account. One source of truth.",
-  description:
-    "ClearPulse ingests data from 9 sources, extracts KPIs with AI, and delivers leadership-grade health dashboards.",
-  icons: { icon: "/favicon.ico" },
+  title: "ClearPulse",
+  description: "Account health intelligence for customer teams.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
