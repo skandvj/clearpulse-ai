@@ -250,6 +250,7 @@ function selectRecentSignalsBySource(
 }
 
 async function scoreSingleKpi(input: {
+  organizationId: string | null;
   account: {
     id: string;
     name: string;
@@ -309,6 +310,7 @@ async function scoreSingleKpi(input: {
       recentSignals: input.recentSignals,
     }),
     maxOutputTokens: 1400,
+    organizationId: input.organizationId ?? undefined,
   });
 
   let parsed: unknown;
@@ -317,6 +319,7 @@ async function scoreSingleKpi(input: {
       text: response.text,
       taskLabel: "KPI health scoring",
       maxOutputTokens: 2400,
+      organizationId: input.organizationId ?? undefined,
     });
   } catch (error) {
     throw new Error(
@@ -460,6 +463,7 @@ export async function runAccountHealthScoring(
     }
 
     const result = await scoreSingleKpi({
+      organizationId: account.organizationId ?? null,
       account: {
         id: account.id,
         name: account.name,
@@ -556,6 +560,7 @@ export async function runAccountHealthScoring(
 
     await tx.auditLog.create({
       data: {
+        organizationId: account.organizationId,
         userId: changedByUserId,
         action: "ACCOUNT_HEALTH_RESCORE",
         entityType: "ClientAccount",

@@ -10,8 +10,8 @@ let client: OpenAI | null = null;
 let clientKey: string | null = null;
 let missingKeyLogged = false;
 
-async function getClient(): Promise<OpenAI | null> {
-  const apiKey = await getAIRuntimeValue("OPENAI_API_KEY");
+async function getClient(organizationId?: string): Promise<OpenAI | null> {
+  const apiKey = await getAIRuntimeValue("OPENAI_API_KEY", organizationId);
   if (!apiKey) {
     if (!missingKeyLogged) {
       missingKeyLogged = true;
@@ -40,8 +40,11 @@ function zeroVector(): number[] {
   return new Array(EMBEDDING_DIM).fill(0);
 }
 
-export async function generateEmbedding(text: string): Promise<number[]> {
-  const openai = await getClient();
+export async function generateEmbedding(
+  text: string,
+  organizationId?: string
+): Promise<number[]> {
+  const openai = await getClient(organizationId);
   if (!openai) return zeroVector();
 
   const truncated = text.slice(0, MAX_TEXT_LENGTH);

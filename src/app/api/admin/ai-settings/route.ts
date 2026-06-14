@@ -27,9 +27,9 @@ const updateSchema = z.object({
 
 export async function GET() {
   try {
-    await requirePermission(PERMISSIONS.CONFIGURE_INTEGRATIONS);
+    const user = await requirePermission(PERMISSIONS.CONFIGURE_INTEGRATIONS);
 
-    const fields = await buildAIFieldStates();
+    const fields = await buildAIFieldStates(user.organizationId);
     const summary = summarizeAIFields(fields);
 
     return NextResponse.json({
@@ -62,6 +62,7 @@ export async function PATCH(request: Request) {
     }
 
     await upsertAISettings({
+      organizationId: user.organizationId,
       userId: user.id,
       values: parsed.data.values,
     });
@@ -69,16 +70,17 @@ export async function PATCH(request: Request) {
     await prisma.auditLog.create({
       data: {
         userId: user.id,
+        organizationId: user.organizationId,
         action: "AI_SETTINGS_UPDATED",
         entityType: "AISettings",
-        entityId: "global",
+        entityId: user.organizationId,
         metadata: {
           keysUpdated: Object.keys(parsed.data.values),
         },
       },
     });
 
-    const fields = await buildAIFieldStates();
+    const fields = await buildAIFieldStates(user.organizationId);
     const summary = summarizeAIFields(fields);
 
     return NextResponse.json({

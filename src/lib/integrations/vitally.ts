@@ -15,6 +15,7 @@ export interface VitallyPushSummary {
 
 interface VitallyPushContext {
   id: string;
+  organizationId: string | null;
   name: string;
   vitallyAccountId: string;
   healthScore: number | null;
@@ -56,12 +57,17 @@ async function parseResponseError(response: Response): Promise<string> {
 }
 
 async function vitallyRequest(
+  organizationId: string | null,
   method: "PATCH" | "POST",
   path: string,
   body: unknown
 ): Promise<void> {
   const apiKey =
-    (await getIntegrationRuntimeValue("VITALLY", "VITALLY_API_KEY")) ??
+    (await getIntegrationRuntimeValue(
+      organizationId ?? undefined,
+      "VITALLY",
+      "VITALLY_API_KEY"
+    )) ??
     env.VITALLY_API_KEY;
 
   if (!apiKey) {
@@ -213,6 +219,7 @@ async function loadVitallyPushContext(
     where: { id: accountId },
     select: {
       id: true,
+      organizationId: true,
       name: true,
       vitallyAccountId: true,
       healthScore: true,
@@ -253,6 +260,7 @@ async function loadVitallyPushContext(
 
   return {
     id: account.id,
+    organizationId: account.organizationId ?? null,
     name: account.name,
     vitallyAccountId: account.vitallyAccountId,
     healthScore: account.healthScore,
@@ -271,6 +279,7 @@ export async function pushAccountHealthToVitally(
   const warnings: string[] = [];
 
   await vitallyRequest(
+    context.organizationId,
     "PATCH",
     `/v1/accounts/${encodeURIComponent(context.vitallyAccountId)}/traits`,
     buildTraitsPayload(context)
@@ -278,7 +287,7 @@ export async function pushAccountHealthToVitally(
 
   let noteCreated = false;
   try {
-    await vitallyRequest("POST", "/v1/notes", {
+    await vitallyRequest(context.organizationId, "POST", "/v1/notes", {
       accountId: context.vitallyAccountId,
       title: `ClearPulse KPI Update — ${formatDate(pushedAt)}`,
       body: buildHealthNote(context, pushedAt),
@@ -294,7 +303,7 @@ export async function pushAccountHealthToVitally(
 
   let timelineEventsCreated = 0;
   try {
-    await vitallyRequest("POST", "/v1/timeline-events", {
+    await vitallyRequest(context.organizationId, "POST", "/v1/timeline-events", {
       accountId: context.vitallyAccountId,
       type: "kpi_health_update",
       metadata: buildTimelineMetadata(context, pushedAt),
@@ -311,6 +320,7 @@ export async function pushAccountHealthToVitally(
   await prisma.auditLog.create({
     data: {
       userId: triggeredByUserId,
+      organizationId: context.organizationId,
       action: "PUSH_TO_VITALLY",
       entityType: "ClientAccount",
       entityId: accountId,

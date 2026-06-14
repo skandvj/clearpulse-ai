@@ -44,10 +44,14 @@ export class PersonasAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const config = await getIntegrationRuntimeValues(this.source, [
-      "PERSONAS_API_URL",
-      "PERSONAS_API_KEY",
-    ]);
+    const account = await prisma.clientAccount.findUniqueOrThrow({
+      where: { id: accountId },
+    });
+    const config = await getIntegrationRuntimeValues(
+      account.organizationId ?? undefined,
+      this.source,
+      ["PERSONAS_API_URL", "PERSONAS_API_KEY"]
+    );
     const apiUrl = config.PERSONAS_API_URL;
     const apiKey = config.PERSONAS_API_KEY;
 
@@ -61,10 +65,6 @@ export class PersonasAdapter implements SourceAdapter {
     if (mockSignals) return mockSignals;
 
     try {
-      const account = await prisma.clientAccount.findUniqueOrThrow({
-        where: { id: accountId },
-      });
-
       const sinceDate = since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const headers = {
         Authorization: `Bearer ${apiKey}`,

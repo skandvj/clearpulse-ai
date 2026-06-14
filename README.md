@@ -15,6 +15,15 @@ ClearPulse helps teams:
 - generate leadership-ready account summaries and reports
 - push health context back into downstream systems like Vitally
 
+## Multi-Tenant Guardrails
+
+This build is organization-aware by default:
+
+- every signed-in user belongs to one workspace organization
+- account lists, admin users, audit logs, sync jobs, AI settings, KPI framework settings, and browser-managed integration credentials are scoped to that organization
+- external account identifiers such as Vitally and Salesforce IDs are unique inside an organization, not globally across every customer
+- the UI surfaces the active workspace so operators can clearly see which tenant they are working inside
+
 ## Who It’s For
 
 - Customer Success leaders who need a real portfolio view
@@ -108,7 +117,7 @@ npm install
 
 2. Configure environment variables
 
-- Use `.env.local.example` as the reference.
+- Copy `.env.example` to `.env.local` and fill in the values you need.
 - Queue-backed sync requires `UPSTASH_REDIS_URL` or `REDIS_URL`.
 - `UPSTASH_REDIS_REST_URL` alone is not enough for BullMQ workers.
 - Mutation route rate limiting uses `UPSTASH_REDIS_REST_URL` plus `UPSTASH_REDIS_REST_TOKEN` when available.
@@ -124,7 +133,7 @@ npm install
 
 ```bash
 npm run db:generate
-npm run db:push
+npm run db:migrate
 npm run db:seed
 ```
 
@@ -166,6 +175,20 @@ npm run db:migrate
 npm run db:seed
 npm run db:studio
 ```
+
+## Vercel Deploy
+
+1. Connect the repo to Vercel.
+2. Provision a PostgreSQL database and set `DATABASE_URL`.
+3. Add at minimum these environment variables in Vercel:
+   - `DATABASE_URL`
+   - `NEXTAUTH_SECRET`
+   - `NEXTAUTH_URL`
+   - `INTEGRATION_SETTINGS_ENCRYPTION_KEY`
+4. Add whichever provider and integration keys your org needs.
+5. Run `prisma migrate deploy` as part of your deployment flow before the app starts serving traffic.
+
+If you are deploying a brand-new environment, the first signed-in user will bootstrap the initial organization automatically and the seed script will create a demo workspace for local development.
 
 ## Current State
 

@@ -83,7 +83,10 @@ const KPI_HEALTH_META: Record<
 };
 
 function getVisibleAccountIdsFilter(user: AuthenticatedUser) {
-  return user.role === "CSM" ? { csmId: user.id } : {};
+  return {
+    organizationId: user.organizationId,
+    ...(user.role === "CSM" ? { csmId: user.id } : {}),
+  };
 }
 
 function startOfLocalDay(date: Date): Date {

@@ -52,11 +52,14 @@ export class JiraAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const config = await getIntegrationRuntimeValues(this.source, [
-      "JIRA_EMAIL",
-      "JIRA_API_TOKEN",
-      "JIRA_BASE_URL",
-    ]);
+    const account = await prisma.clientAccount.findUniqueOrThrow({
+      where: { id: accountId },
+    });
+    const config = await getIntegrationRuntimeValues(
+      account.organizationId ?? undefined,
+      this.source,
+      ["JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_BASE_URL"]
+    );
     const email = config.JIRA_EMAIL;
     const apiToken = config.JIRA_API_TOKEN;
     const baseUrl = config.JIRA_BASE_URL;
@@ -71,10 +74,6 @@ export class JiraAdapter implements SourceAdapter {
     if (mockSignals) return mockSignals;
 
     try {
-      const account = await prisma.clientAccount.findUniqueOrThrow({
-        where: { id: accountId },
-      });
-
       const accountLabel = account.name.replace(/[^a-zA-Z0-9]/g, "");
       const accountSlug = account.name.toLowerCase().replace(/\s+/g, "-");
       const sinceDate = since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

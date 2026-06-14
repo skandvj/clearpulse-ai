@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { Role } from "@prisma/client";
+import { ensureUserOrganization } from "@/lib/tenant";
 
 declare module "next-auth" {
   interface Session {
@@ -13,11 +14,17 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
       role: Role;
+      organizationId: string;
+      organizationName: string;
+      organizationSlug: string;
     };
   }
 
   interface User {
     role?: Role;
+    organizationId?: string;
+    organizationName?: string;
+    organizationSlug?: string;
   }
 }
 
@@ -25,6 +32,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: Role;
+    organizationId: string;
+    organizationName: string;
+    organizationSlug: string;
   }
 }
 
@@ -66,12 +76,17 @@ export const authConfig: NextAuthConfig = {
           data: { lastLogin: new Date() },
         });
 
+        const organization = await ensureUserOrganization(user.id);
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.avatarUrl,
           role: user.role,
+          organizationId: organization.id,
+          organizationName: organization.name,
+          organizationSlug: organization.slug,
         };
       },
     }),
@@ -81,10 +96,20 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.id = user.id as string;
         token.role = (user.role as Role) ?? "CSM";
+        token.organizationId = user.organizationId as string;
+        token.organizationName = user.organizationName as string;
+        token.organizationSlug = user.organizationSlug as string;
       }
 
       if (trigger === "update" && session?.role) {
         token.role = session.role as Role;
+      }
+
+      if (token.id && !token.organizationId) {
+        const organization = await ensureUserOrganization(token.id);
+        token.organizationId = organization.id;
+        token.organizationName = organization.name;
+        token.organizationSlug = organization.slug;
       }
 
       return token;
@@ -93,6 +118,9 @@ export const authConfig: NextAuthConfig = {
       if (token.id) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.organizationId = token.organizationId;
+        session.user.organizationName = token.organizationName;
+        session.user.organizationSlug = token.organizationSlug;
       }
       return session;
     },
@@ -117,15 +145,23 @@ export const authConfig: NextAuthConfig = {
               lastLogin: new Date(),
             },
           });
+          const organization = await ensureUserOrganization(newUser.id);
           user.id = newUser.id;
           user.role = newUser.role;
+          user.organizationId = organization.id;
+          user.organizationName = organization.name;
+          user.organizationSlug = organization.slug;
         } else {
           await prisma.user.update({
             where: { email: user.email! },
             data: { lastLogin: new Date() },
           });
+          const organization = await ensureUserOrganization(existingUser.id);
           user.id = existingUser.id;
           user.role = existingUser.role;
+          user.organizationId = organization.id;
+          user.organizationName = organization.name;
+          user.organizationSlug = organization.slug;
         }
       }
       return true;

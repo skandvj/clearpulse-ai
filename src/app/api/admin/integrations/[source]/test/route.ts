@@ -68,7 +68,7 @@ export async function POST(
 
     const [latestJob, signalCount, settings] = await Promise.all([
       prisma.syncJob.findFirst({
-        where: { source },
+        where: { organizationId: user.organizationId, source },
         orderBy: { createdAt: "desc" },
         select: {
           status: true,
@@ -78,8 +78,15 @@ export async function POST(
           signalsFound: true,
         },
       }),
-      prisma.rawSignal.count({ where: { source } }),
-      listIntegrationSettings(source),
+      prisma.rawSignal.count({
+        where: {
+          source,
+          account: {
+            organizationId: user.organizationId,
+          },
+        },
+      }),
+      listIntegrationSettings(user.organizationId, source),
     ]);
 
     const fields = buildIntegrationFieldStates(definition, settings);

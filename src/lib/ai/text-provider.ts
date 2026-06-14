@@ -14,6 +14,7 @@ interface GenerateStructuredTextInput {
   prompt: string;
   maxOutputTokens: number;
   temperature?: number;
+  organizationId?: string;
 }
 
 interface GeminiGenerateContentResponse {
@@ -29,8 +30,8 @@ interface GeminiGenerateContentResponse {
   };
 }
 
-async function getAnthropicApiKey(): Promise<string> {
-  const key = await getAIRuntimeValue("ANTHROPIC_API_KEY");
+async function getAnthropicApiKey(organizationId?: string): Promise<string> {
+  const key = await getAIRuntimeValue("ANTHROPIC_API_KEY", organizationId);
   if (!key) {
     throw new Error("AI text provider is not configured");
   }
@@ -38,8 +39,8 @@ async function getAnthropicApiKey(): Promise<string> {
   return key;
 }
 
-async function getGeminiApiKey(): Promise<string> {
-  const key = await getAIRuntimeValue("GEMINI_API_KEY");
+async function getGeminiApiKey(organizationId?: string): Promise<string> {
+  const key = await getAIRuntimeValue("GEMINI_API_KEY", organizationId);
   if (!key) {
     throw new Error("AI text provider is not configured");
   }
@@ -50,7 +51,7 @@ async function getGeminiApiKey(): Promise<string> {
 async function generateWithAnthropic(
   input: GenerateStructuredTextInput
 ): Promise<string> {
-  const apiKey = await getAnthropicApiKey();
+  const apiKey = await getAnthropicApiKey(input.organizationId);
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
     model: ANTHROPIC_MODEL,
@@ -76,7 +77,7 @@ async function generateWithAnthropic(
 async function generateWithGemini(
   input: GenerateStructuredTextInput
 ): Promise<string> {
-  const apiKey = await getGeminiApiKey();
+  const apiKey = await getGeminiApiKey(input.organizationId);
   const response = await fetch(
     `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(
       apiKey
@@ -136,7 +137,7 @@ async function generateWithGemini(
 export async function generateStructuredText(
   input: GenerateStructuredTextInput
 ): Promise<{ provider: AITextProvider; text: string }> {
-  const provider = await getAITextProvider();
+  const provider = await getAITextProvider(input.organizationId);
 
   if (provider === "gemini") {
     return {

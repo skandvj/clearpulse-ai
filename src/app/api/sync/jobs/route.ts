@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { JobStatus, Prisma, SignalSource } from "@prisma/client";
 import {
+  getOrganizationWhere,
   requirePermission,
   unauthorizedResponse,
   forbiddenResponse,
@@ -31,7 +32,7 @@ const VALID_STATUSES = new Set<string>([
 
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_SYNC_CONSOLE);
+    const user = await requirePermission(PERMISSIONS.VIEW_SYNC_CONSOLE);
 
     const url = request.nextUrl;
     const sourceParam = url.searchParams.get("source");
@@ -43,7 +44,9 @@ export async function GET(request: NextRequest) {
       Math.max(1, parseInt(url.searchParams.get("pageSize") ?? "25", 10))
     );
 
-    const where: Prisma.SyncJobWhereInput = {};
+    const where: Prisma.SyncJobWhereInput = {
+      ...getOrganizationWhere(user),
+    };
 
     if (sourceParam && VALID_SOURCES.has(sourceParam)) {
       where.source = sourceParam as SignalSource;
@@ -100,6 +103,7 @@ export async function GET(request: NextRequest) {
         ? []
         : await prisma.clientAccount.findMany({
             where: {
+              ...getOrganizationWhere(user),
               id: {
                 in: accountIds,
               },

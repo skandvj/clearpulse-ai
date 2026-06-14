@@ -13,7 +13,7 @@ import { createUserSchema } from "@/lib/validations/user";
 
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.MANAGE_USERS);
+    const admin = await requirePermission(PERMISSIONS.MANAGE_USERS);
 
     const search = request.nextUrl.searchParams.get("search")?.trim();
     const where: Prisma.UserWhereInput = search
@@ -23,7 +23,11 @@ export async function GET(request: NextRequest) {
             { name: { contains: search, mode: "insensitive" } },
           ],
         }
-      : {};
+      : { organizationId: admin.organizationId };
+
+    if (search) {
+      where.organizationId = admin.organizationId;
+    }
 
     const users = await prisma.user.findMany({
       where,
@@ -89,6 +93,7 @@ export async function POST(request: NextRequest) {
         role: result.data.role,
         password,
         isActive: true,
+        organizationId: admin.organizationId,
       },
       select: {
         id: true,
@@ -109,6 +114,7 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: admin.id,
+        organizationId: admin.organizationId,
         action: "USER_CREATED",
         entityType: "User",
         entityId: user.id,

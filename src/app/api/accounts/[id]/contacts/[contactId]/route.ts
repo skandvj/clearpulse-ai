@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
+  requireAccountAccessById,
   requirePermission,
   unauthorizedResponse,
   forbiddenResponse,
@@ -15,8 +16,9 @@ export async function PUT(
 ) {
   try {
     await requirePermission(PERMISSIONS.EDIT_ACCOUNT_FIELDS);
+    await requireAccountAccessById(params.id);
 
-    const contact = await prisma.contact.findUnique({
+    const contact = await prisma.contact.findFirst({
       where: { id: params.contactId, accountId: params.id },
     });
 
@@ -52,8 +54,9 @@ export async function DELETE(
 ) {
   try {
     await requirePermission(PERMISSIONS.EDIT_ACCOUNT_FIELDS);
+    await requireAccountAccessById(params.id);
 
-    const contact = await prisma.contact.findUnique({
+    const contact = await prisma.contact.findFirst({
       where: { id: params.contactId, accountId: params.id },
     });
 

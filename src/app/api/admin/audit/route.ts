@@ -38,7 +38,7 @@ function toCsvCell(value: unknown): string {
 
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_AUDIT_LOGS);
+    const user = await requirePermission(PERMISSIONS.VIEW_AUDIT_LOGS);
 
     const url = request.nextUrl;
     const userId = url.searchParams.get("userId");
@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
       Math.max(1, parseInt(url.searchParams.get("pageSize") ?? "25", 10))
     );
 
-    const where: Prisma.AuditLogWhereInput = {};
+    const where: Prisma.AuditLogWhereInput = {
+      organizationId: user.organizationId,
+    };
 
     if (userId) {
       where.userId = userId;
@@ -105,23 +107,31 @@ export async function GET(request: NextRequest) {
     const [accounts, users, total, actionGroups, actorIds] = await Promise.all([
       accountIds.length > 0
         ? prisma.clientAccount.findMany({
-            where: { id: { in: accountIds } },
+            where: {
+              organizationId: user.organizationId,
+              id: { in: accountIds },
+            },
             select: { id: true, name: true },
           })
         : Promise.resolve([]),
       targetUserIds.length > 0
         ? prisma.user.findMany({
-            where: { id: { in: targetUserIds } },
+            where: {
+              organizationId: user.organizationId,
+              id: { in: targetUserIds },
+            },
             select: { id: true, name: true, email: true },
           })
         : Promise.resolve([]),
       format === "csv" ? Promise.resolve(logs.length) : prisma.auditLog.count({ where }),
       prisma.auditLog.groupBy({
         by: ["action"],
+        where,
         _count: { _all: true },
       }),
       prisma.auditLog.groupBy({
         by: ["userId"],
+        where,
         _count: { _all: true },
       }),
     ]);
@@ -131,6 +141,7 @@ export async function GET(request: NextRequest) {
         ? []
         : await prisma.user.findMany({
             where: {
+              organizationId: user.organizationId,
               id: { in: actorIds.map((entry) => entry.userId) },
             },
             select: {

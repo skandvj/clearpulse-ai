@@ -15,7 +15,7 @@ export async function GET() {
       return unauthorizedResponse();
     }
 
-    const settings = await getKpiFrameworkSettings();
+    const settings = await getKpiFrameworkSettings(user.organizationId);
 
     return NextResponse.json({ settings });
   } catch (error) {

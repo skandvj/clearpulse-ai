@@ -114,8 +114,11 @@ function parseSelect<T extends string>(
   return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-export async function getKpiFrameworkSettings(): Promise<KpiFrameworkRuntimeSettings> {
+export async function getKpiFrameworkSettings(
+  organizationId: string
+): Promise<KpiFrameworkRuntimeSettings> {
   const records = await prisma.kpiFrameworkSetting.findMany({
+    where: { organizationId },
     select: { key: true, value: true },
   });
   const byKey = new Map(records.map((record) => [record.key, record.value]));
@@ -147,8 +150,10 @@ export async function getKpiFrameworkSettings(): Promise<KpiFrameworkRuntimeSett
   };
 }
 
-export async function buildKpiFrameworkFieldStates(): Promise<KpiFrameworkSettingField[]> {
-  const settings = await getKpiFrameworkSettings();
+export async function buildKpiFrameworkFieldStates(
+  organizationId: string
+): Promise<KpiFrameworkSettingField[]> {
+  const settings = await getKpiFrameworkSettings(organizationId);
 
   return SETTING_DEFINITIONS.map((definition) => {
     let value: number | boolean | string = definition.defaultValue;
@@ -183,6 +188,7 @@ export async function buildKpiFrameworkFieldStates(): Promise<KpiFrameworkSettin
 }
 
 export async function upsertKpiFrameworkSettings(args: {
+  organizationId: string;
   userId: string;
   values: Partial<Record<KpiFrameworkSettingKey, string | number | boolean>>;
 }) {
@@ -194,8 +200,14 @@ export async function upsertKpiFrameworkSettings(args: {
   await Promise.all(
     entries.map(([key, value]) =>
       prisma.kpiFrameworkSetting.upsert({
-        where: { key },
+        where: {
+          organizationId_key: {
+            organizationId: args.organizationId,
+            key,
+          },
+        },
         create: {
+          organizationId: args.organizationId,
           key,
           value: String(value),
           updatedById: args.userId,

@@ -1,22 +1,15 @@
 import { prisma } from "@/lib/db";
-import type { AuthenticatedUser } from "@/lib/auth-helpers";
-import { canAccessAccount } from "@/lib/rbac";
-
-function ensureAccountAccess(
-  user: AuthenticatedUser,
-  accountCsmId: string | null
-): void {
-  if (!canAccessAccount(user.role, user.id, accountCsmId)) {
-    throw new Error("Forbidden");
-  }
-}
+import {
+  getAccessibleAccountWhere,
+  type AuthenticatedUser,
+} from "@/lib/auth-helpers";
 
 export async function getAccountMeetingsForUser(
   accountId: string,
   user: AuthenticatedUser
 ) {
-  const account = await prisma.clientAccount.findUnique({
-    where: { id: accountId },
+  const account = await prisma.clientAccount.findFirst({
+    where: getAccessibleAccountWhere(user, accountId),
     select: {
       id: true,
       name: true,
@@ -40,8 +33,6 @@ export async function getAccountMeetingsForUser(
   if (!account) {
     return null;
   }
-
-  ensureAccountAccess(user, account.csmId);
   return account;
 }
 
@@ -50,8 +41,8 @@ export async function getMeetingDetailForUser(
   meetingId: string,
   user: AuthenticatedUser
 ) {
-  const account = await prisma.clientAccount.findUnique({
-    where: { id: accountId },
+  const account = await prisma.clientAccount.findFirst({
+    where: getAccessibleAccountWhere(user, accountId),
     select: {
       id: true,
       name: true,
@@ -70,8 +61,6 @@ export async function getMeetingDetailForUser(
   if (!account) {
     return null;
   }
-
-  ensureAccountAccess(user, account.csmId);
 
   const meeting = await prisma.meeting.findFirst({
     where: {

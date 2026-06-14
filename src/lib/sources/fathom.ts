@@ -24,9 +24,15 @@ export class FathomAdapter implements SourceAdapter {
     accountId: string,
     since?: Date
   ): Promise<RawSignalInput[]> {
-    const config = await getIntegrationRuntimeValues(this.source, [
-      "FATHOM_API_KEY",
-    ]);
+    const account = await prisma.clientAccount.findUniqueOrThrow({
+      where: { id: accountId },
+      include: { contacts: true },
+    });
+    const config = await getIntegrationRuntimeValues(
+      account.organizationId ?? undefined,
+      this.source,
+      ["FATHOM_API_KEY"]
+    );
 
     const mockSignals = await resolveMockFallback({
       source: this.source,
@@ -40,11 +46,6 @@ export class FathomAdapter implements SourceAdapter {
     const apiKey = config.FATHOM_API_KEY!;
 
     try {
-      const account = await prisma.clientAccount.findUniqueOrThrow({
-        where: { id: accountId },
-        include: { contacts: true },
-      });
-
       const domain = account.domain?.trim().toLowerCase() ?? null;
       const contactEmails = Array.from(
         new Set(

@@ -10,6 +10,7 @@ import { PERMISSIONS } from "@/lib/rbac";
 import { updateUserSchema } from "@/lib/validations/user";
 
 async function ensureActiveAdminSafety(
+  organizationId: string,
   userId: string,
   currentRole: "ADMIN" | "LEADERSHIP" | "CSM" | "VIEWER",
   currentIsActive: boolean,
@@ -25,6 +26,7 @@ async function ensureActiveAdminSafety(
 
   const remainingActiveAdmins = await prisma.user.count({
     where: {
+      organizationId,
       role: "ADMIN",
       isActive: true,
       id: { not: userId },
@@ -55,10 +57,11 @@ export async function PATCH(
         id: true,
         role: true,
         isActive: true,
+        organizationId: true,
       },
     });
 
-    if (!target) {
+    if (!target || target.organizationId !== admin.organizationId) {
       return errorResponse("User not found", 404);
     }
 
@@ -75,6 +78,7 @@ export async function PATCH(
     }
 
     await ensureActiveAdminSafety(
+      admin.organizationId,
       target.id,
       target.role,
       target.isActive,
@@ -107,6 +111,7 @@ export async function PATCH(
     await prisma.auditLog.create({
       data: {
         userId: admin.id,
+        organizationId: admin.organizationId,
         action: "USER_UPDATED",
         entityType: "User",
         entityId: updated.id,

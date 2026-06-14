@@ -217,7 +217,10 @@ export async function upsertFathomMeetingRecord(
 
   return prisma.meeting.upsert({
     where: {
-      fathomId: meeting.id,
+      accountId_fathomId: {
+        accountId,
+        fathomId: meeting.id,
+      },
     },
     create: {
       fathomId: meeting.id,

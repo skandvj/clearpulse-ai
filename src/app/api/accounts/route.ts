@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
+  getOrganizationWhere,
   requireAuth,
   requirePermission,
   unauthorizedResponse,
@@ -27,11 +28,10 @@ export async function GET(request: NextRequest) {
       searchParams.get("sortDir") ??
       "asc";
 
-    const where: Prisma.ClientAccountWhereInput = {};
-
-    if (user.role === "CSM") {
-      where.csmId = user.id;
-    }
+    const where: Prisma.ClientAccountWhereInput = {
+      ...getOrganizationWhere(user),
+      ...(user.role === "CSM" ? { csmId: user.id } : {}),
+    };
 
     if (search) {
       where.OR = [
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.EDIT_ACCOUNT_FIELDS);
+    const user = await requirePermission(PERMISSIONS.EDIT_ACCOUNT_FIELDS);
 
     const body = await request.json();
     const result = createAccountSchema.safeParse(body);
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
     const account = await prisma.clientAccount.create({
       data: {
         ...result.data,
+        organizationId: user.organizationId,
         tier: normalizeTier(result.data.tier) ?? undefined,
       },
       include: {

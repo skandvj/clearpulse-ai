@@ -137,8 +137,9 @@ function normalizeTextProvider(value: string | null | undefined): AITextProvider
     : DEFAULT_TEXT_PROVIDER;
 }
 
-export async function listAISettings() {
+export async function listAISettings(organizationId: string) {
   return prisma.aiSetting.findMany({
+    where: { organizationId },
     select: {
       key: true,
       encryptedValue: true,
@@ -148,9 +149,14 @@ export async function listAISettings() {
 }
 
 export async function getAIRuntimeValue(
-  key: AIProviderKey
+  key: AIProviderKey,
+  organizationId?: string
 ): Promise<string | undefined> {
-  const settings = await listAISettings();
+  if (!organizationId) {
+    return process.env[key];
+  }
+
+  const settings = await listAISettings(organizationId);
   const stored = settings.find((item) => item.key === key);
 
   if (stored) {
@@ -203,8 +209,15 @@ function getResolvedTextProviderFromValues(values: {
   };
 }
 
-export async function getAITextProvider(): Promise<AITextProvider> {
-  const settings = await listAISettings();
+export async function getAITextProvider(
+  organizationId?: string
+): Promise<AITextProvider> {
+  if (!organizationId) {
+    const envProvider = getEnvFallback("AI_TEXT_PROVIDER");
+    return normalizeTextProvider(envProvider);
+  }
+
+  const settings = await listAISettings(organizationId);
   const storedByKey = new Map(settings.map((item) => [item.key, item]));
   const providerSetting = storedByKey.get("AI_TEXT_PROVIDER")
     ? decryptIntegrationValue(storedByKey.get("AI_TEXT_PROVIDER")!.encryptedValue)
@@ -224,8 +237,10 @@ export async function getAITextProvider(): Promise<AITextProvider> {
   }).provider;
 }
 
-export async function buildAIFieldStates(): Promise<AIFieldState[]> {
-  const settings = await listAISettings();
+export async function buildAIFieldStates(
+  organizationId: string
+): Promise<AIFieldState[]> {
+  const settings = await listAISettings(organizationId);
   const storedByKey = new Map(settings.map((item) => [item.key, item]));
   const storedProvider = storedByKey.get("AI_TEXT_PROVIDER")
     ? decryptIntegrationValue(storedByKey.get("AI_TEXT_PROVIDER")!.encryptedValue)
@@ -327,6 +342,7 @@ export function summarizeAIFields(fields: AIFieldState[]) {
 }
 
 export async function upsertAISettings(input: {
+  organizationId: string;
   userId: string;
   values: Partial<Record<AIProviderKey, string>>;
 }) {
@@ -344,8 +360,14 @@ export async function upsertAISettings(input: {
 
     return [
       prisma.aiSetting.upsert({
-        where: { key },
+        where: {
+          organizationId_key: {
+            organizationId: input.organizationId,
+            key,
+          },
+        },
         create: {
+          organizationId: input.organizationId,
           key,
           encryptedValue: encryptIntegrationValue(value),
           isSecret: definition.secret,

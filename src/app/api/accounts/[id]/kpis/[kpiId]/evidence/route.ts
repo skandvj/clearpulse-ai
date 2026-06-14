@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, SignalSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
-  requireAccountAccess,
+  requireAccountAccessById,
   requirePermission,
   unauthorizedResponse,
   forbiddenResponse,
@@ -19,17 +19,7 @@ export async function GET(
 ) {
   try {
     await requirePermission(PERMISSIONS.VIEW_SIGNAL_EVIDENCE);
-
-    const account = await prisma.clientAccount.findUnique({
-      where: { id: params.id },
-      select: { csmId: true },
-    });
-
-    if (!account) {
-      return errorResponse("Account not found", 404);
-    }
-
-    await requireAccountAccess(account.csmId);
+    await requireAccountAccessById(params.id);
 
     const kpi = await prisma.clientKPI.findFirst({
       where: { id: params.kpiId, accountId: params.id },

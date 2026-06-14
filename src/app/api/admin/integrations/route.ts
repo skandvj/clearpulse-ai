@@ -30,10 +30,11 @@ function resolveStatus(args: {
 
 export async function GET() {
   try {
-    await requirePermission(PERMISSIONS.CONFIGURE_INTEGRATIONS);
+    const user = await requirePermission(PERMISSIONS.CONFIGURE_INTEGRATIONS);
 
     const [jobs, signalGroups, settings] = await Promise.all([
       prisma.syncJob.findMany({
+        where: { organizationId: user.organizationId },
         orderBy: { createdAt: "desc" },
         select: {
           source: true,
@@ -47,9 +48,14 @@ export async function GET() {
       }),
       prisma.rawSignal.groupBy({
         by: ["source"],
+        where: {
+          account: {
+            organizationId: user.organizationId,
+          },
+        },
         _count: { _all: true },
       }),
-      listIntegrationSettings(),
+      listIntegrationSettings(user.organizationId),
     ]);
 
     const settingsBySource = new Map<string, typeof settings>();

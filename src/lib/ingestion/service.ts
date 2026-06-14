@@ -24,6 +24,15 @@ export async function processIngestionJob(
     errors: [],
   };
 
+  const account = await prisma.clientAccount.findUnique({
+    where: { id: accountId },
+    select: { id: true, organizationId: true },
+  });
+
+  if (!account) {
+    throw new Error("Account not found");
+  }
+
   const syncJob = syncJobId
     ? await prisma.syncJob.findUnique({
         where: { id: syncJobId },
@@ -31,6 +40,7 @@ export async function processIngestionJob(
       })
     : await prisma.syncJob.create({
         data: {
+          organizationId: account.organizationId,
           source,
           accountId,
           triggeredBy,
@@ -82,7 +92,10 @@ export async function processIngestionJob(
           continue;
         }
 
-        const embedding = await generateEmbedding(signal.content);
+        const embedding = await generateEmbedding(
+          signal.content,
+          account.organizationId ?? undefined
+        );
 
         const isAllZeros = embedding.every((v) => v === 0);
         if (!isAllZeros) {
@@ -133,7 +146,7 @@ export async function processIngestionJob(
     });
 
     await prisma.clientAccount.update({
-      where: { id: accountId },
+      where: { id: account.id },
       data: { lastSyncedAt: new Date() },
     });
 

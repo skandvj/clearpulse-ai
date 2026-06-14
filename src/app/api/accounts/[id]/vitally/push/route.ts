@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import {
   errorResponse,
   forbiddenResponse,
-  requireAccountAccess,
+  requireAccountAccessById,
   requirePermission,
   unauthorizedResponse,
 } from "@/lib/auth-helpers";
@@ -22,17 +21,7 @@ export async function POST(
 ) {
   try {
     const user = await requirePermission(PERMISSIONS.PUSH_TO_VITALLY);
-
-    const account = await prisma.clientAccount.findUnique({
-      where: { id: params.id },
-      select: { csmId: true },
-    });
-
-    if (!account) {
-      return errorResponse("Account not found", 404);
-    }
-
-    await requireAccountAccess(account.csmId);
+    await requireAccountAccessById(params.id);
 
     const rateLimit = await checkRateLimit({
       key: buildRateLimitKey({

@@ -10,21 +10,25 @@ datasource db {
 }
 
 model User {
-  id                         String               @id @default(cuid())
-  email                      String               @unique
-  name                       String?
-  avatarUrl                  String?
-  password                   String?
-  role                       Role                 @default(CSM)
-  isActive                   Boolean              @default(true)
-  lastLogin                  DateTime?
-  createdAt                  DateTime             @default(now())
-  sessions                   Session[]
-  accounts                   ClientAccount[]
-  auditLogs                  AuditLog[]
-  integrationSettingsUpdated IntegrationSetting[] @relation("IntegrationSettingUpdatedBy")
-  aiSettingsUpdated          AiSetting[]          @relation("AISettingUpdatedBy")
+  id                          String                @id @default(cuid())
+  email                       String                @unique
+  name                        String?
+  avatarUrl                   String?
+  password                    String?
+  role                        Role                  @default(CSM)
+  isActive                    Boolean               @default(true)
+  lastLogin                   DateTime?
+  organization                Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId              String?
+  createdAt                   DateTime              @default(now())
+  sessions                    Session[]
+  accounts                    ClientAccount[]
+  auditLogs                   AuditLog[]
+  integrationSettingsUpdated  IntegrationSetting[]  @relation("IntegrationSettingUpdatedBy")
+  aiSettingsUpdated           AiSetting[]           @relation("AISettingUpdatedBy")
   kpiFrameworkSettingsUpdated KpiFrameworkSetting[] @relation("KpiFrameworkSettingUpdatedBy")
+
+  @@index([organizationId, role])
 }
 
 model Session {
@@ -42,12 +46,30 @@ enum Role {
   VIEWER
 }
 
+model Organization {
+  id                   String               @id @default(cuid())
+  name                 String
+  slug                 String               @unique
+  domain               String?              @unique
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  users                User[]
+  accounts             ClientAccount[]
+  auditLogs            AuditLog[]
+  integrationSettings  IntegrationSetting[]
+  aiSettings           AiSetting[]
+  kpiFrameworkSettings KpiFrameworkSetting[]
+  syncJobs             SyncJob[]
+}
+
 model ClientAccount {
   id                 String         @id @default(cuid())
+  organization       Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId     String?
   name               String
   domain             String?
-  vitallyAccountId   String?        @unique
-  salesforceId       String?        @unique
+  vitallyAccountId   String?
+  salesforceId       String?
   csm                User?          @relation(fields: [csmId], references: [id])
   csmId              String?
   tier               String?
@@ -68,6 +90,11 @@ model ClientAccount {
   meetings           Meeting[]
   contacts           Contact[]
   reportSnapshots    ReportSnapshot[]
+
+  @@unique([organizationId, vitallyAccountId])
+  @@unique([organizationId, salesforceId])
+  @@index([organizationId, name])
+  @@index([organizationId, csmId])
 }
 
 enum HealthStatus {
@@ -204,7 +231,7 @@ enum HealthTrend {
 
 model Meeting {
   id              String        @id @default(cuid())
-  fathomId        String?       @unique
+  fathomId        String?
   account         ClientAccount @relation(fields: [accountId], references: [id])
   accountId       String
   title           String
@@ -217,6 +244,8 @@ model Meeting {
   extractedKPIs   Boolean       @default(false)
   participants    String[]
   createdAt       DateTime      @default(now())
+
+  @@unique([accountId, fathomId])
 }
 
 model Contact {
@@ -240,63 +269,81 @@ model ReportSnapshot {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
-  action     String
-  entityType String
-  entityId   String
-  metadata   Json?
-  createdAt  DateTime @default(now())
+  id             String        @id @default(cuid())
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId  String?
+  user            User          @relation(fields: [userId], references: [id])
+  userId          String
+  action          String
+  entityType      String
+  entityId        String
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
 }
 
 model IntegrationSetting {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId  String?
   source         SignalSource
   key            String
-  encryptedValue String       @db.Text
-  isSecret       Boolean      @default(true)
-  updatedBy      User?        @relation("IntegrationSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  encryptedValue String        @db.Text
+  isSecret       Boolean       @default(true)
+  updatedBy      User?         @relation("IntegrationSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   updatedById    String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  @@unique([source, key])
+  @@unique([organizationId, source, key])
 }
 
 model AiSetting {
-  id             String   @id @default(cuid())
-  key            String   @unique
-  encryptedValue String   @db.Text
-  isSecret       Boolean  @default(true)
-  updatedBy      User?    @relation("AISettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  id             String        @id @default(cuid())
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId  String?
+  key            String
+  encryptedValue String        @db.Text
+  isSecret       Boolean       @default(true)
+  updatedBy      User?         @relation("AISettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   updatedById    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, key])
 }
 
 model KpiFrameworkSetting {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       String   @db.Text
-  updatedBy   User?    @relation("KpiFrameworkSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  updatedById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String        @id @default(cuid())
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId  String?
+  key            String
+  value          String        @db.Text
+  updatedBy      User?         @relation("KpiFrameworkSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, key])
 }
 
 model SyncJob {
-  id          String       @id @default(cuid())
-  source      SignalSource
-  accountId   String?
-  status      JobStatus    @default(PENDING)
-  triggeredBy String
-  startedAt   DateTime?
-  completedAt DateTime?
-  error       String?
-  signalsFound Int?
-  kpisUpdated  Int?
-  createdAt   DateTime     @default(now())
+  id             String        @id @default(cuid())
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId  String?
+  source         SignalSource
+  accountId      String?
+  status         JobStatus     @default(PENDING)
+  triggeredBy    String
+  startedAt      DateTime?
+  completedAt    DateTime?
+  error          String?
+  signalsFound   Int?
+  kpisUpdated    Int?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
 }
 
 enum JobStatus {

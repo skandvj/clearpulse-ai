@@ -1,14 +1,18 @@
 import { auth } from "@/lib/auth";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { hasPermission, Permission, canAccessAccount } from "@/lib/rbac";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { ensureUserOrganization } from "@/lib/tenant";
 
 export interface AuthenticatedUser {
   id: string;
   email: string;
   name?: string | null;
   role: Role;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
 }
 
 export async function getServerUser(): Promise<AuthenticatedUser | null> {
@@ -23,10 +27,26 @@ export async function getServerUser(): Promise<AuthenticatedUser | null> {
       name: true,
       role: true,
       isActive: true,
+      organizationId: true,
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
     },
   });
 
   if (!currentUser || !currentUser.isActive) {
+    return null;
+  }
+
+  const organization =
+    currentUser.organization ??
+    (await ensureUserOrganization(currentUser.id));
+
+  if (!organization) {
     return null;
   }
 
@@ -35,6 +55,9 @@ export async function getServerUser(): Promise<AuthenticatedUser | null> {
     email: currentUser.email,
     name: currentUser.name,
     role: currentUser.role,
+    organizationId: organization.id,
+    organizationName: organization.name,
+    organizationSlug: organization.slug,
   };
 }
 
@@ -64,6 +87,56 @@ export async function requireAccountAccess(
     throw new Error("Forbidden: no access to this account");
   }
   return user;
+}
+
+export function getOrganizationWhere(
+  user: AuthenticatedUser
+): { organizationId: string } {
+  return { organizationId: user.organizationId };
+}
+
+export function getAccessibleAccountWhere(
+  user: AuthenticatedUser,
+  accountId?: string
+): Prisma.ClientAccountWhereInput {
+  return {
+    ...(accountId ? { id: accountId } : {}),
+    organizationId: user.organizationId,
+    ...(user.role === "CSM" ? { csmId: user.id } : {}),
+  };
+}
+
+export async function requireAccountAccessById(accountId: string): Promise<{
+  user: AuthenticatedUser;
+  account: {
+    id: string;
+    name: string;
+    csmId: string | null;
+    organizationId: string | null;
+  };
+}> {
+  const user = await requireAuth();
+  const account = await prisma.clientAccount.findFirst({
+    where: getAccessibleAccountWhere(user, accountId),
+    select: {
+      id: true,
+      name: true,
+      csmId: true,
+      organizationId: true,
+    },
+  });
+
+  if (!account) {
+    throw new Error("Forbidden: no access to this account");
+  }
+
+  return { user, account };
+}
+
+export async function requireOrgPermission(
+  permission: Permission
+): Promise<AuthenticatedUser> {
+  return requirePermission(permission);
 }
 
 export function unauthorizedResponse(message = "Unauthorized"): NextResponse {

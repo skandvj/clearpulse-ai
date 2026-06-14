@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import {
+  getAccessibleAccountWhere,
   requireAccountAccess,
   requirePermission,
 } from "@/lib/auth-helpers";
@@ -16,15 +17,17 @@ export const runtime = "nodejs";
 export const POST = createAccountReportGeneratePostHandler({
   requirePermission: () => requirePermission(PERMISSIONS.DOWNLOAD_PDF_REPORT),
   requireAccountAccess,
-  getAccountById: (accountId) =>
-    prisma.clientAccount.findUnique({
-      where: { id: accountId },
+  getAccountById: async (accountId) => {
+    const user = await requirePermission(PERMISSIONS.DOWNLOAD_PDF_REPORT);
+    return prisma.clientAccount.findFirst({
+      where: getAccessibleAccountWhere(user, accountId),
       select: {
         id: true,
         name: true,
         csmId: true,
       },
-    }),
+    });
+  },
   checkRateLimit,
   loadAccountReportData,
   runAccountHealthScoring,
@@ -45,8 +48,16 @@ export const POST = createAccountReportGeneratePostHandler({
       select: { id: true },
     }),
   createAuditLog: async (input) => {
+    const actor = await prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { organizationId: true },
+    });
+
     await prisma.auditLog.create({
-      data: input,
+      data: {
+        ...input,
+        organizationId: actor?.organizationId ?? null,
+      },
     });
   },
 });

@@ -43,9 +43,14 @@ export class VitallyAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const config = await getIntegrationRuntimeValues(this.source, [
-      "VITALLY_API_KEY",
-    ]);
+    const account = await prisma.clientAccount.findUniqueOrThrow({
+      where: { id: accountId },
+    });
+    const config = await getIntegrationRuntimeValues(
+      account.organizationId ?? undefined,
+      this.source,
+      ["VITALLY_API_KEY"]
+    );
 
     const mockSignals = await resolveMockFallback({
       source: this.source,
@@ -59,10 +64,6 @@ export class VitallyAdapter implements SourceAdapter {
     const apiKey = config.VITALLY_API_KEY!;
 
     try {
-      const account = await prisma.clientAccount.findUniqueOrThrow({
-        where: { id: accountId },
-      });
-
       if (!account.vitallyAccountId) {
         logWarn("adapter.vitally.missing_account_id", {
           accountId,

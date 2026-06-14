@@ -27,10 +27,10 @@ const updateSchema = z.object({
 
 export async function GET() {
   try {
-    await requirePermission(PERMISSIONS.CONFIGURE_INTEGRATIONS);
+    const user = await requirePermission(PERMISSIONS.CONFIGURE_INTEGRATIONS);
 
     const [fields, referenceData] = await Promise.all([
-      buildKpiFrameworkFieldStates(),
+      buildKpiFrameworkFieldStates(user.organizationId),
       loadKpiFrameworkReferenceData(),
     ]);
 
@@ -60,6 +60,7 @@ export async function PATCH(request: Request) {
     }
 
     await upsertKpiFrameworkSettings({
+      organizationId: user.organizationId,
       userId: user.id,
       values: parsed.data.values,
     });
@@ -67,16 +68,17 @@ export async function PATCH(request: Request) {
     await prisma.auditLog.create({
       data: {
         userId: user.id,
+        organizationId: user.organizationId,
         action: "KPI_FRAMEWORK_UPDATED",
         entityType: "KPIFramework",
-        entityId: "global",
+        entityId: user.organizationId,
         metadata: {
           keysUpdated: Object.keys(parsed.data.values),
         },
       },
     });
 
-    const fields = await buildKpiFrameworkFieldStates();
+    const fields = await buildKpiFrameworkFieldStates(user.organizationId);
 
     return NextResponse.json({
       message: "KPI framework updated.",

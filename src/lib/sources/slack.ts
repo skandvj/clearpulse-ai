@@ -57,9 +57,14 @@ export class SlackAdapter implements SourceAdapter {
     accountId: string,
     since?: Date,
   ): Promise<RawSignalInput[]> {
-    const config = await getIntegrationRuntimeValues(this.source, [
-      "SLACK_BOT_TOKEN",
-    ]);
+    const account = await prisma.clientAccount.findUniqueOrThrow({
+      where: { id: accountId },
+    });
+    const config = await getIntegrationRuntimeValues(
+      account.organizationId ?? undefined,
+      this.source,
+      ["SLACK_BOT_TOKEN"]
+    );
 
     const mockSignals = await resolveMockFallback({
       source: this.source,
@@ -73,9 +78,6 @@ export class SlackAdapter implements SourceAdapter {
     const token = config.SLACK_BOT_TOKEN!;
 
     try {
-      const account = await prisma.clientAccount.findUniqueOrThrow({
-        where: { id: accountId },
-      });
       const accountName = account.name.toLowerCase().replace(/\s+/g, "-");
       const oldest = since
         ? String(since.getTime() / 1000)

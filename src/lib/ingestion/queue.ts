@@ -62,11 +62,16 @@ export async function enqueueIngestion(
   triggeredBy: string,
   since?: Date
 ): Promise<SyncDispatchResult> {
+  const account = await prisma.clientAccount.findUnique({
+    where: { id: accountId },
+    select: { organizationId: true },
+  });
   const q = getQueue();
 
   if (q) {
     const syncJob = await prisma.syncJob.create({
       data: {
+        organizationId: account?.organizationId ?? null,
         source,
         accountId,
         triggeredBy,
@@ -130,6 +135,10 @@ export async function enqueueBulkSync(
   triggeredBy: string,
   since?: Date
 ): Promise<SyncDispatchResult> {
+  const account = await prisma.clientAccount.findUnique({
+    where: { id: accountId },
+    select: { organizationId: true },
+  });
   const q = getQueue();
 
   if (q) {
@@ -137,6 +146,7 @@ export async function enqueueBulkSync(
       ALL_SOURCES.map((source) =>
         prisma.syncJob.create({
           data: {
+            organizationId: account?.organizationId ?? null,
             source,
             accountId,
             triggeredBy,

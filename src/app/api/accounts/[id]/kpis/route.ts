@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
-  requireAccountAccess,
+  requireAccountAccessById,
   requirePermission,
   unauthorizedResponse,
   forbiddenResponse,
@@ -15,16 +15,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const account = await prisma.clientAccount.findUnique({
-      where: { id: params.id },
-      select: { csmId: true },
-    });
-
-    if (!account) {
-      return errorResponse("Account not found", 404);
-    }
-
-    await requireAccountAccess(account.csmId);
+    await requireAccountAccessById(params.id);
 
     const kpis = await prisma.clientKPI.findMany({
       where: { accountId: params.id },
@@ -47,17 +38,7 @@ export async function POST(
 ) {
   try {
     const user = await requirePermission(PERMISSIONS.EDIT_KPIS);
-
-    const account = await prisma.clientAccount.findUnique({
-      where: { id: params.id },
-      select: { csmId: true },
-    });
-
-    if (!account) {
-      return errorResponse("Account not found", 404);
-    }
-
-    await requireAccountAccess(account.csmId);
+    await requireAccountAccessById(params.id);
 
     const body = await request.json();
     const result = createKPISchema.safeParse(body);

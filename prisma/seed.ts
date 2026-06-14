@@ -6,6 +6,18 @@ const prisma = new PrismaClient();
 async function main() {
   const adminPassword = await bcrypt.hash("admin123", 12);
   const csmPassword = await bcrypt.hash("csm123", 12);
+  const workspace = await prisma.organization.upsert({
+    where: { slug: "clearpulse-demo" },
+    update: {
+      name: "ClearPulse Demo Workspace",
+      domain: "clearpulse.dev",
+    },
+    create: {
+      name: "ClearPulse Demo Workspace",
+      slug: "clearpulse-demo",
+      domain: "clearpulse.dev",
+    },
+  });
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@clearpulse.dev" },
@@ -13,6 +25,7 @@ async function main() {
       name: "Admin User",
       role: Role.ADMIN,
       isActive: true,
+      organizationId: workspace.id,
     },
     create: {
       email: "admin@clearpulse.dev",
@@ -20,6 +33,7 @@ async function main() {
       password: adminPassword,
       role: Role.ADMIN,
       isActive: true,
+      organizationId: workspace.id,
     },
   });
 
@@ -29,6 +43,7 @@ async function main() {
       name: "VP of Customer Success",
       role: Role.LEADERSHIP,
       isActive: true,
+      organizationId: workspace.id,
     },
     create: {
       email: "leadership@clearpulse.dev",
@@ -36,6 +51,7 @@ async function main() {
       password: await bcrypt.hash("lead123", 12),
       role: Role.LEADERSHIP,
       isActive: true,
+      organizationId: workspace.id,
     },
   });
 
@@ -45,6 +61,7 @@ async function main() {
       name: "Customer Success Manager",
       role: Role.CSM,
       isActive: true,
+      organizationId: workspace.id,
     },
     create: {
       email: "csm@clearpulse.dev",
@@ -52,6 +69,7 @@ async function main() {
       password: csmPassword,
       role: Role.CSM,
       isActive: true,
+      organizationId: workspace.id,
     },
   });
 
@@ -61,6 +79,7 @@ async function main() {
       name: "Read-Only Viewer",
       role: Role.VIEWER,
       isActive: true,
+      organizationId: workspace.id,
     },
     create: {
       email: "viewer@clearpulse.dev",
@@ -68,15 +87,22 @@ async function main() {
       password: await bcrypt.hash("viewer123", 12),
       role: Role.VIEWER,
       isActive: true,
+      organizationId: workspace.id,
     },
   });
 
   console.log("Seeded users:", { admin, leadership, csm, viewer });
 
   const account1 = await prisma.clientAccount.upsert({
-    where: { vitallyAccountId: "demo-acme-corp" },
+    where: {
+      organizationId_vitallyAccountId: {
+        organizationId: workspace.id,
+        vitallyAccountId: "demo-acme-corp",
+      },
+    },
     update: {},
     create: {
+      organizationId: workspace.id,
       name: "Acme Corp",
       domain: "acme.com",
       vitallyAccountId: "demo-acme-corp",
@@ -95,9 +121,15 @@ async function main() {
   });
 
   const account2 = await prisma.clientAccount.upsert({
-    where: { vitallyAccountId: "demo-globex-inc" },
+    where: {
+      organizationId_vitallyAccountId: {
+        organizationId: workspace.id,
+        vitallyAccountId: "demo-globex-inc",
+      },
+    },
     update: {},
     create: {
+      organizationId: workspace.id,
       name: "Globex Inc",
       domain: "globex.io",
       vitallyAccountId: "demo-globex-inc",
@@ -114,9 +146,15 @@ async function main() {
   });
 
   const account3 = await prisma.clientAccount.upsert({
-    where: { vitallyAccountId: "demo-initech-llc" },
+    where: {
+      organizationId_vitallyAccountId: {
+        organizationId: workspace.id,
+        vitallyAccountId: "demo-initech-llc",
+      },
+    },
     update: {},
     create: {
+      organizationId: workspace.id,
       name: "Initech LLC",
       domain: "initech.com",
       vitallyAccountId: "demo-initech-llc",

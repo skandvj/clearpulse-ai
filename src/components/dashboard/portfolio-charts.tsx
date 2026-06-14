@@ -41,14 +41,14 @@ const SOURCE_LABELS: Record<SignalSource, string> = {
 
 const SOURCE_COLORS: Record<SignalSource, string> = {
   SLACK: "#0F172A",
-  FATHOM: "#1E293B",
-  AM_MEETING: "#334155",
-  VITALLY: "#475569",
-  SALESFORCE: "#64748B",
-  PERSONAS: "#94A3B8",
-  SHAREPOINT: "#CBD5E1",
-  JIRA: "#111827",
-  GOOGLE_DRIVE: "#3B82F6",
+  FATHOM: "#2563EB",
+  AM_MEETING: "#38BDF8",
+  VITALLY: "#0EA5E9",
+  SALESFORCE: "#10B981",
+  PERSONAS: "#22C55E",
+  SHAREPOINT: "#7DD3FC",
+  JIRA: "#1D4ED8",
+  GOOGLE_DRIVE: "#60A5FA",
 };
 
 function ChartTooltip({
@@ -63,7 +63,7 @@ function ChartTooltip({
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+    <div className="glass-panel-soft rounded-[22px] px-3 py-2">
       {label ? <p className="text-xs font-medium text-slate-500">{label}</p> : null}
       <div className="mt-1 space-y-1">
         {payload.map((item) => (
@@ -143,7 +143,7 @@ export function SourceActivityChart({ data }: SourceActivityChartProps) {
           data={data}
           margin={{ top: 8, right: 12, left: -24, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DBEAFE" />
           <XAxis
             dataKey="dateLabel"
             tickLine={false}

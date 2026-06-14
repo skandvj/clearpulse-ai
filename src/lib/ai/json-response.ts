@@ -64,6 +64,7 @@ export async function parseOrRepairStructuredJsonResponse(input: {
   text: string;
   taskLabel: string;
   maxOutputTokens?: number;
+  organizationId?: string;
 }): Promise<unknown> {
   try {
     return parseStructuredJsonResponse(input.text);
@@ -83,6 +84,7 @@ export async function parseOrRepairStructuredJsonResponse(input: {
       ].join("\n"),
       maxOutputTokens: input.maxOutputTokens ?? 8192,
       temperature: 0,
+      organizationId: input.organizationId,
     });
 
     try {

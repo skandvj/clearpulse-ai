@@ -61,6 +61,7 @@ export async function PATCH(
     }
 
     await upsertIntegrationSettings({
+      organizationId: user.organizationId,
       source,
       values: parsed.data.values,
       userId: user.id,
@@ -69,6 +70,7 @@ export async function PATCH(
     await prisma.auditLog.create({
       data: {
         userId: user.id,
+        organizationId: user.organizationId,
         action: "INTEGRATION_UPDATED",
         entityType: "Integration",
         entityId: source,
@@ -81,7 +83,7 @@ export async function PATCH(
 
     const [latestJob, signalCount, settings] = await Promise.all([
       prisma.syncJob.findFirst({
-        where: { source },
+        where: { organizationId: user.organizationId, source },
         orderBy: { createdAt: "desc" },
         select: {
           status: true,
@@ -91,8 +93,15 @@ export async function PATCH(
           signalsFound: true,
         },
       }),
-      prisma.rawSignal.count({ where: { source } }),
-      listIntegrationSettings(source),
+      prisma.rawSignal.count({
+        where: {
+          source,
+          account: {
+            organizationId: user.organizationId,
+          },
+        },
+      }),
+      listIntegrationSettings(user.organizationId, source),
     ]);
 
     const fields = buildIntegrationFieldStates(definition, settings);

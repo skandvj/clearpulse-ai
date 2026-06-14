@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
-  requireAccountAccess,
+  requireAccountAccessById,
   requirePermission,
   unauthorizedResponse,
   forbiddenResponse,
@@ -16,8 +16,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const account = await prisma.clientAccount.findUnique({
-      where: { id: params.id },
+    const { account: accessAccount } = await requireAccountAccessById(params.id);
+
+    const account = await prisma.clientAccount.findFirst({
+      where: { id: accessAccount.id },
       include: {
         csm: { select: { id: true, name: true, email: true, avatarUrl: true } },
         kpis: {
@@ -47,8 +49,6 @@ export async function GET(
       return errorResponse("Account not found", 404);
     }
 
-    await requireAccountAccess(account.csmId);
-
     return NextResponse.json({
       ...account,
       tier: normalizeTier(account.tier),
@@ -68,17 +68,7 @@ export async function PUT(
 ) {
   try {
     await requirePermission(PERMISSIONS.EDIT_ACCOUNT_FIELDS);
-
-    const account = await prisma.clientAccount.findUnique({
-      where: { id: params.id },
-      select: { csmId: true },
-    });
-
-    if (!account) {
-      return errorResponse("Account not found", 404);
-    }
-
-    await requireAccountAccess(account.csmId);
+    await requireAccountAccessById(params.id);
 
     const body = await request.json();
     const result = updateAccountSchema.safeParse(body);

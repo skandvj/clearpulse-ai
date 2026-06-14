@@ -194,7 +194,8 @@ function buildVideoClipUrl(
 
 async function callExtraction(
   signals: SignalPayload[],
-  highPriorityAuthors: string[]
+  highPriorityAuthors: string[],
+  organizationId: string | null
 ): Promise<z.infer<typeof extractedKpiSchema>[]> {
   const userIntro =
     highPriorityAuthors.length > 0
@@ -207,6 +208,7 @@ async function callExtraction(
     system: KPI_EXTRACTION_SYSTEM,
     prompt: userBody,
     maxOutputTokens: 8192,
+    organizationId: organizationId ?? undefined,
   });
 
   let parsed: unknown;
@@ -215,6 +217,7 @@ async function callExtraction(
       text: response.text,
       taskLabel: "KPI extraction",
       maxOutputTokens: 8192,
+      organizationId: organizationId ?? undefined,
     });
   } catch (error) {
     throw new Error(
@@ -299,7 +302,11 @@ export async function runKpiExtraction(
   accountId: string,
   changedByUserId: string
 ): Promise<ExtractionSummary> {
-  const [signals, contacts, meetings] = await Promise.all([
+  const [account, signals, contacts, meetings] = await Promise.all([
+    prisma.clientAccount.findUnique({
+      where: { id: accountId },
+      select: { organizationId: true },
+    }),
     prisma.rawSignal.findMany({
       where: { accountId },
       orderBy: { signalDate: "desc" },
@@ -330,6 +337,10 @@ export async function runKpiExtraction(
       },
     }),
   ]);
+
+  if (!account) {
+    throw new Error("Account not found");
+  }
 
   if (signals.length === 0) {
     return {
@@ -373,7 +384,11 @@ export async function runKpiExtraction(
 
   const batchResults: z.infer<typeof extractedKpiSchema>[][] = [];
   for (const chunk of chunks) {
-    const kpis = await callExtraction(chunk, highPriorityAuthors);
+    const kpis = await callExtraction(
+      chunk,
+      highPriorityAuthors,
+      account.organizationId
+    );
     batchResults.push(kpis);
   }
 
@@ -574,6 +589,7 @@ export async function runKpiExtraction(
     if (kpisCreated > 0 || kpisUpdated > 0 || evidenceRows > 0) {
       await tx.auditLog.create({
         data: {
+          organizationId: account.organizationId,
           userId: changedByUserId,
           action: "KPI_EXTRACTION",
           entityType: "ClientAccount",

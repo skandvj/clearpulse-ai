@@ -83,9 +83,15 @@ function resolveFieldState(
   };
 }
 
-export async function listIntegrationSettings(source?: SignalSource) {
+export async function listIntegrationSettings(
+  organizationId: string,
+  source?: SignalSource
+) {
   return prisma.integrationSetting.findMany({
-    where: source ? { source } : undefined,
+    where: {
+      organizationId,
+      ...(source ? { source } : {}),
+    },
     select: {
       source: true,
       key: true,
@@ -98,8 +104,26 @@ export async function listIntegrationSettings(source?: SignalSource) {
 export async function getIntegrationRuntimeValues(
   source: SignalSource,
   keys: string[]
+): Promise<Record<string, string | undefined>>;
+export async function getIntegrationRuntimeValues(
+  organizationId: string | undefined,
+  source: SignalSource,
+  keys: string[]
+): Promise<Record<string, string | undefined>>;
+export async function getIntegrationRuntimeValues(
+  arg1: string | SignalSource | undefined,
+  arg2: SignalSource | string[],
+  arg3?: string[]
 ): Promise<Record<string, string | undefined>> {
-  const records = await listIntegrationSettings(source);
+  const organizationId = Array.isArray(arg2) ? undefined : arg1;
+  const source = (Array.isArray(arg2) ? arg1 : arg2) as SignalSource;
+  const keys = (Array.isArray(arg2) ? arg2 : arg3) ?? [];
+
+  if (!organizationId) {
+    return Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  }
+
+  const records = await listIntegrationSettings(organizationId, source);
   const byKey = new Map(records.map((record) => [record.key, record]));
 
   return Object.fromEntries(
@@ -117,8 +141,21 @@ export async function getIntegrationRuntimeValues(
 export async function getIntegrationRuntimeValue(
   source: SignalSource,
   key: string
+): Promise<string | undefined>;
+export async function getIntegrationRuntimeValue(
+  organizationId: string | undefined,
+  source: SignalSource,
+  key: string
+): Promise<string | undefined>;
+export async function getIntegrationRuntimeValue(
+  arg1: string | SignalSource | undefined,
+  arg2: SignalSource | string,
+  arg3?: string
 ) {
-  const values = await getIntegrationRuntimeValues(source, [key]);
+  const organizationId = typeof arg2 === "string" && arg3 ? arg1 : undefined;
+  const source = (arg3 ? arg2 : arg1) as SignalSource;
+  const key = (arg3 ?? arg2) as string;
+  const values = await getIntegrationRuntimeValues(organizationId, source, [key]);
   return values[key];
 }
 
@@ -146,6 +183,7 @@ export function summarizeIntegrationFields(fields: IntegrationFieldState[]) {
 }
 
 export async function upsertIntegrationSettings(input: {
+  organizationId: string;
   source: SignalSource;
   values: Record<string, string>;
   userId: string;
@@ -176,6 +214,7 @@ export async function upsertIntegrationSettings(input: {
       operations.push(
         prisma.integrationSetting.deleteMany({
           where: {
+            organizationId: input.organizationId,
             source: input.source,
             key,
           },
@@ -187,12 +226,14 @@ export async function upsertIntegrationSettings(input: {
     operations.push(
       prisma.integrationSetting.upsert({
         where: {
-          source_key: {
+          organizationId_source_key: {
+            organizationId: input.organizationId,
             source: input.source,
             key,
           },
         },
         create: {
+          organizationId: input.organizationId,
           source: input.source,
           key,
           encryptedValue: encryptIntegrationValue(value),

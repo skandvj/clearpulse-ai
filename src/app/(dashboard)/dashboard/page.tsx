@@ -16,7 +16,12 @@ import { HealthRing } from "@/components/ui/health-ring";
 import { getServerUser } from "@/lib/auth-helpers";
 import { getDashboardData } from "@/lib/dashboard";
 import { PERMISSIONS, hasPermission } from "@/lib/rbac";
-import { ExternalLink } from "lucide-react";
+import {
+  ArrowRight,
+  ExternalLink,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import {
   KpiHealthBreakdownChart,
   SourceActivityChart,
@@ -99,59 +104,96 @@ export default async function DashboardPage() {
       label: "Total Active Accounts",
       value: data.stats.totalAccounts,
       tone: "text-slate-950",
+      detail: "Accounts live inside this workspace",
     },
     {
       label: "Accounts Critical",
       value: data.stats.criticalAccounts,
       tone: "text-red-600",
+      detail: "Need executive attention first",
     },
     {
       label: "Accounts At Risk",
       value: data.stats.atRiskAccounts,
       tone: "text-amber-600",
+      detail: "Recovery plans in progress",
     },
     {
       label: "KPIs Declining",
       value: data.stats.decliningKpis,
       tone: "text-orange-600",
+      detail: "Signals trending down this cycle",
     },
   ];
+
+  const workspaceLabel = user.organizationName.replace(/ Workspace$/i, "");
 
   return (
     <PageWrapper>
       <div className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-none">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-950">
-                Portfolio Dashboard
+        <div className="relative overflow-hidden rounded-[36px] border border-white/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(239,246,255,0.92)_44%,rgba(224,242,254,0.86))] p-7 shadow-[0_24px_60px_rgba(15,23,42,0.10)]">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_center,rgba(37,99,235,0.18),transparent_64%)] lg:block" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <Badge className="rounded-full border-0 bg-slate-950 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white shadow-none">
+                <Sparkles className="mr-1.5 h-3 w-3" />
+                {workspaceLabel}
+              </Badge>
+              <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
+                Portfolio command center
               </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Monitor account health, signal flow, and the KPI changes that need attention.
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-[15px]">
+                Monitor health, signal flow, and KPI movement from one premium workspace.
+                Account data, admin settings, and audit records stay isolated to{" "}
+                {user.organizationName}.
               </p>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Button asChild size="lg">
+                  <Link href="/accounts">
+                    Open accounts
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link href="/admin/integrations">Review integrations</Link>
+                </Button>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Button asChild>
-                <Link href="/accounts">
-                  Open Accounts
-                </Link>
-              </Button>
+            <div className="grid gap-3 sm:grid-cols-2 lg:max-w-[360px] lg:grid-cols-1">
+              <div className="glass-panel-soft rounded-[26px] p-4">
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  Tenant boundary
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Credentials, integrations, and sync jobs are scoped to this org.
+                </p>
+              </div>
+              <div className="glass-panel-soft rounded-[26px] p-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                  Activity window
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Charts below reflect the latest 14-day signal cadence across connected sources.
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.label} className="rounded-3xl border-slate-200 shadow-none">
+            <Card key={stat.label} className="overflow-hidden">
               <CardContent className="p-6">
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-slate-500">
+                <div className="space-y-4">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
                     {stat.label}
                   </p>
                   <p className={`text-3xl font-semibold tracking-tight ${stat.tone}`}>
                     {stat.value}
                   </p>
+                  <p className="text-sm leading-6 text-slate-500">{stat.detail}</p>
                 </div>
               </CardContent>
             </Card>
@@ -159,7 +201,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="rounded-3xl border-slate-200 shadow-none">
+          <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 Portfolio Health Map
@@ -176,7 +218,7 @@ export default async function DashboardPage() {
                     <Link
                       key={account.id}
                       href={`/accounts/${account.id}`}
-                      className="block rounded-2xl border border-slate-200 p-4 transition-all hover:border-slate-300 hover:bg-slate-50/80"
+                      className="block rounded-[24px] border border-white/80 bg-white/70 p-4 transition-all hover:-translate-y-0.5 hover:border-slate-200 hover:bg-white"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
@@ -206,7 +248,7 @@ export default async function DashboardPage() {
                       </div>
 
                       <div className="mt-4 flex items-center gap-3">
-                        <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100/90">
                           <div
                             className={`h-full rounded-full ${getHealthBarClasses(
                               account.healthScore
@@ -227,7 +269,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-slate-200 shadow-none">
+          <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 KPI Health Breakdown
@@ -240,7 +282,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-          <Card className="rounded-3xl border-slate-200 shadow-none">
+          <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 Source Signal Activity
@@ -251,7 +293,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-slate-200 shadow-none">
+          <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
                 Recent AI Extractions
@@ -266,7 +308,7 @@ export default async function DashboardPage() {
                 data.recentExtractions.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                    className="rounded-[24px] border border-white/80 bg-white/75 p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
@@ -312,7 +354,7 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <Card className="rounded-3xl border-slate-200 shadow-none">
+        <Card>
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <CardTitle className="text-base font-semibold">

@@ -30,6 +30,7 @@ export interface SyncRouteUser {
   email: string;
   name?: string | null;
   role: string;
+  organizationId: string;
 }
 
 export interface SyncRouteAccount {
