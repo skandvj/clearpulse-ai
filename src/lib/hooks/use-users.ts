@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 export type UserRole = "ADMIN" | "LEADERSHIP" | "CSM" | "VIEWER";
 
@@ -40,6 +45,7 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
 export function useUsers(search?: string) {
   return useQuery<AdminUser[]>({
     queryKey: ["admin-users", search ?? ""],
+    placeholderData: keepPreviousData,
     queryFn: () =>
       fetchJSON<AdminUser[]>(
         `/api/admin/users${search ? `?search=${encodeURIComponent(search)}` : ""}`

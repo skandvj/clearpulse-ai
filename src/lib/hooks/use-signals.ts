@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useQuery,
   useMutation,
   useQueryClient,
@@ -151,6 +152,7 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
 export function useSignals(accountId: string, filters: SignalFilters = {}) {
   return useQuery<SignalListResponse>({
     queryKey: ["signals", accountId, filters],
+    placeholderData: keepPreviousData,
     queryFn: () =>
       fetchJSON<SignalListResponse>(
         `/api/accounts/${accountId}/signals${buildQueryString({

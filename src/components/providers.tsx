@@ -1,6 +1,5 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -20,13 +19,11 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <SessionProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider delayDuration={300}>
-          {children}
-          <Toaster position="bottom-right" richColors closeButton />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </SessionProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider delayDuration={300}>
+        {children}
+        <Toaster position="bottom-right" richColors closeButton />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }

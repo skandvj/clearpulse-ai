@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageWrapper } from "@/components/layout/page-wrapper";
-import { UserManagement } from "@/components/admin/user-management";
+import { LazyUserManagement } from "@/components/admin/lazy-admin-panels";
 import { getServerUser } from "@/lib/auth-helpers";
 
 export default async function AdminUsersPage() {
@@ -22,7 +22,7 @@ export default async function AdminUsersPage() {
           </p>
         </div>
 
-        <UserManagement currentUserId={user.id} />
+        <LazyUserManagement currentUserId={user.id} />
       </div>
     </PageWrapper>
   );

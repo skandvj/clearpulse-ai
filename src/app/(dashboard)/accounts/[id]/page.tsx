@@ -1,5 +1,5 @@
 import { PageWrapper } from "@/components/layout/page-wrapper";
-import { AccountOverview } from "@/components/accounts/account-overview";
+import { LazyAccountOverview } from "@/components/accounts/lazy-account-pages";
 
 interface AccountPageProps {
   params: { id: string };
@@ -8,7 +8,7 @@ interface AccountPageProps {
 export default function AccountPage({ params }: AccountPageProps) {
   return (
     <PageWrapper>
-      <AccountOverview accountId={params.id} />
+      <LazyAccountOverview accountId={params.id} />
     </PageWrapper>
   );
 }

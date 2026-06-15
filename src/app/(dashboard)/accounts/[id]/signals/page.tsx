@@ -1,5 +1,5 @@
 import { PageWrapper } from "@/components/layout/page-wrapper";
-import { SignalBrowser } from "@/components/signals/signal-browser";
+import { LazySignalBrowser } from "@/components/signals/lazy-signal-browser";
 
 interface SignalsPageProps {
   params: { id: string };
@@ -8,7 +8,7 @@ interface SignalsPageProps {
 export default function SignalsPage({ params }: SignalsPageProps) {
   return (
     <PageWrapper>
-      <SignalBrowser accountId={params.id} />
+      <LazySignalBrowser accountId={params.id} />
     </PageWrapper>
   );
 }

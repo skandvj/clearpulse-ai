@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { Role } from "@prisma/client";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { useCurrentUser } from "@/components/providers/current-user-provider";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 import { getNavItemsForRole } from "@/lib/navigation";
@@ -33,7 +33,7 @@ function getNavGroups(role: Role) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const currentUser = useCurrentUser();
   const {
     sidebarCollapsed,
     toggleSidebar,
@@ -41,18 +41,17 @@ export function Sidebar() {
     setSidebarMobileOpen,
   } = useAppStore();
 
-  const role = (session?.user?.role as Role) ?? "VIEWER";
+  const role = currentUser?.role ?? ("VIEWER" as Role);
   const navGroups = getNavGroups(role);
-  const workspaceName =
-    session?.user?.organizationName ?? "Private Workspace";
-  const initials = session?.user?.name
-    ? session.user.name
+  const workspaceName = currentUser?.organizationName ?? "Private Workspace";
+  const initials = currentUser?.name
+    ? currentUser.name
         .split(" ")
         .map((part) => part[0])
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : session?.user?.email?.slice(0, 2).toUpperCase() ?? "CP";
+    : currentUser?.email?.slice(0, 2).toUpperCase() ?? "CP";
 
   return (
     <>
@@ -192,7 +191,7 @@ export function Sidebar() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-slate-900">
-                      {session?.user?.name ?? session?.user?.email ?? "User"}
+                      {currentUser?.name ?? currentUser?.email ?? "User"}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">{role}</p>
                   </div>

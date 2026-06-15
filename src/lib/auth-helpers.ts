@@ -9,6 +9,7 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   name?: string | null;
+  image?: string | null;
   role: Role;
   organizationId: string;
   organizationName: string;
@@ -25,6 +26,7 @@ export async function getServerUser(): Promise<AuthenticatedUser | null> {
       id: true,
       email: true,
       name: true,
+      avatarUrl: true,
       role: true,
       isActive: true,
       organizationId: true,
@@ -54,6 +56,7 @@ export async function getServerUser(): Promise<AuthenticatedUser | null> {
     id: currentUser.id,
     email: currentUser.email,
     name: currentUser.name,
+    image: currentUser.avatarUrl,
     role: currentUser.role,
     organizationId: organization.id,
     organizationName: organization.name,

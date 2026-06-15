@@ -1,5 +1,5 @@
 import { PageWrapper } from "@/components/layout/page-wrapper";
-import { IntegrationsOverview } from "@/components/admin/integrations-overview";
+import { LazyIntegrationsOverview } from "@/components/admin/lazy-admin-panels";
 
 export default function AdminIntegrationsPage() {
   return (
@@ -14,7 +14,7 @@ export default function AdminIntegrationsPage() {
           </p>
         </div>
 
-        <IntegrationsOverview />
+        <LazyIntegrationsOverview />
       </div>
     </PageWrapper>
   );

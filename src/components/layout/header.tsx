@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { useCurrentUser } from "@/components/providers/current-user-provider";
 import { useAppStore } from "@/stores/app-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -17,17 +18,17 @@ import { LogOut, Menu, ShieldCheck } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
 
 export function Header() {
-  const { data: session } = useSession();
+  const currentUser = useCurrentUser();
   const { setSidebarMobileOpen } = useAppStore();
 
-  const initials = session?.user?.name
-    ? session.user.name
+  const initials = currentUser?.name
+    ? currentUser.name
         .split(" ")
         .map((n) => n[0])
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : session?.user?.email?.[0]?.toUpperCase() ?? "?";
+    : currentUser?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
     <header className="sticky top-0 z-30 px-4 pt-4 lg:px-8">
@@ -48,7 +49,7 @@ export function Header() {
             <BrandMark className="h-8 w-8" />
             <div>
               <p className="font-medium text-slate-900">
-                {session?.user?.organizationName ?? "Workspace"}
+                {currentUser?.organizationName ?? "Workspace"}
               </p>
               <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
                 Isolated tenant
@@ -70,8 +71,8 @@ export function Header() {
               >
                 <Avatar className="h-10 w-10 ring-2 ring-white/80">
                   <AvatarImage
-                    src={session?.user?.image ?? undefined}
-                    alt={session?.user?.name ?? "User"}
+                    src={currentUser?.image ?? undefined}
+                    alt={currentUser?.name ?? "User"}
                   />
                   <AvatarFallback className="bg-[linear-gradient(135deg,#0f172a,#1d4ed8)] text-xs font-semibold text-white">
                     {initials}
@@ -85,17 +86,17 @@ export function Header() {
             >
               <div className="px-3 py-2">
                 <p className="text-sm font-medium text-slate-900">
-                  {session?.user?.name ?? "User"}
+                  {currentUser?.name ?? "User"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {session?.user?.email}
+                  {currentUser?.email}
                 </p>
                 <div className="mt-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
                     Workspace
                   </p>
                   <p className="mt-1 text-sm font-medium text-slate-900">
-                    {session?.user?.organizationName ?? "Workspace"}
+                    {currentUser?.organizationName ?? "Workspace"}
                   </p>
                 </div>
               </div>

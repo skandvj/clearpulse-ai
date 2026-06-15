@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useCurrentUser } from "@/components/providers/current-user-provider";
 import { Role } from "@prisma/client";
 import {
   hasPermission,
@@ -24,9 +24,9 @@ interface UsePermissionsReturn {
 }
 
 export function usePermissions(): UsePermissionsReturn {
-  const { data: session, status } = useSession();
-  const role = (session?.user?.role as Role) ?? null;
-  const userId = session?.user?.id ?? "";
+  const currentUser = useCurrentUser();
+  const role = currentUser?.role ?? null;
+  const userId = currentUser?.id ?? "";
 
   const can = (permission: Permission): boolean => {
     if (!role) return false;
@@ -57,6 +57,6 @@ export function usePermissions(): UsePermissionsReturn {
     isLeadership: role === "LEADERSHIP",
     isCSM: role === "CSM",
     isViewer: role === "VIEWER",
-    isLoading: status === "loading",
+    isLoading: false,
   };
 }

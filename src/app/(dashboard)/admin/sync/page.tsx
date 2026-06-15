@@ -1,5 +1,5 @@
 import { PageWrapper } from "@/components/layout/page-wrapper";
-import { AdminSyncConsole } from "@/components/admin/sync-console";
+import { LazyAdminSyncConsole } from "@/components/admin/lazy-admin-panels";
 
 export default function AdminSyncPage() {
   return (
@@ -14,7 +14,7 @@ export default function AdminSyncPage() {
           </p>
         </div>
 
-        <AdminSyncConsole />
+        <LazyAdminSyncConsole />
       </div>
     </PageWrapper>
   );

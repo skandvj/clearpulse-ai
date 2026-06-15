@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -67,17 +66,21 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
     return () => clearTimeout(debounceRef.current);
   }, []);
 
-  const filters: SignalFilters = {
-    source: activeSources.size > 0 ? Array.from(activeSources).join(",") : undefined,
-    search: debouncedSearch || undefined,
-    author: author || undefined,
-    dateFrom: dateFrom || undefined,
-    dateTo: dateTo || undefined,
-    page,
-    pageSize: 25,
-  };
+  const filters = useMemo<SignalFilters>(
+    () => ({
+      source:
+        activeSources.size > 0 ? Array.from(activeSources).join(",") : undefined,
+      search: debouncedSearch || undefined,
+      author: author || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      page,
+      pageSize: 25,
+    }),
+    [activeSources, author, dateFrom, dateTo, debouncedSearch, page]
+  );
 
-  const { data, isLoading } = useSignals(accountId, filters);
+  const { data, isLoading, isFetching } = useSignals(accountId, filters);
 
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
 
@@ -124,6 +127,11 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
               </p>
             )}
           </div>
+          {isFetching ? (
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+              Refreshing
+            </span>
+          ) : null}
           {can(PERMISSIONS.TRIGGER_SOURCE_SYNC) && (
             <SyncTriggerButton accountId={accountId} />
           )}
@@ -232,15 +240,12 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
           </p>
         </div>
       ) : (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`page-${page}-${debouncedSearch}`}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-3"
-          >
+        <div
+          className={cn(
+            "space-y-3 transition-opacity duration-150",
+            isFetching && "opacity-80"
+          )}
+        >
             {data.signals.map((signal) => {
               const isExpanded = expandedId === signal.id;
               const contentPreview =
@@ -333,8 +338,7 @@ export function SignalBrowser({ accountId }: SignalBrowserProps) {
                 </button>
               );
             })}
-          </motion.div>
-        </AnimatePresence>
+        </div>
       )}
 
       {data && totalPages > 1 && (
