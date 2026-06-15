@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,7 @@ function LoginForm() {
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const {
     register,
@@ -79,6 +80,12 @@ function LoginForm() {
     await signIn("google", { callbackUrl });
   };
 
+  const handleDemoSignIn = async () => {
+    setError(null);
+    setDemoLoading(true);
+    await signIn("demo", { callbackUrl });
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#f4efe8] px-4 py-10">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.10),_transparent_28%),radial-gradient(circle_at_85%_16%,_rgba(16,185,129,0.08),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.18),_rgba(244,239,232,0.96))]" />
@@ -106,15 +113,33 @@ function LoginForm() {
                 Access your workspace
               </h1>
               <p className="text-sm leading-6 text-slate-600">
-                Sign in with Google or use your email and password.
+                Sign in with Google, explore the demo instantly, or use your
+                email and password.
               </p>
             </div>
+
+            <Button
+              className="mb-3 h-11 w-full justify-between bg-slate-950 text-white hover:bg-slate-800"
+              onClick={handleDemoSignIn}
+              disabled={demoLoading || googleLoading || isSubmitting}
+            >
+              <span>View Demo Workspace</span>
+              {demoLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowRight className="h-4 w-4" />
+              )}
+            </Button>
+
+            <p className="mb-5 text-center text-xs uppercase tracking-[0.18em] text-slate-400">
+              No account needed for the demo
+            </p>
 
             <Button
               variant="outline"
               className="h-11 w-full gap-3 border-[#ddd2c4] bg-white text-slate-800 hover:bg-slate-50"
               onClick={handleGoogleSignIn}
-              disabled={googleLoading || isSubmitting}
+              disabled={googleLoading || demoLoading || isSubmitting}
             >
               {googleLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -196,7 +221,7 @@ function LoginForm() {
               <Button
                 type="submit"
                 className="h-11 w-full bg-slate-950 text-white hover:bg-slate-800"
-                disabled={isSubmitting || googleLoading}
+                disabled={isSubmitting || googleLoading || demoLoading}
               >
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

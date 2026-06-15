@@ -5,6 +5,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { Role } from "@prisma/client";
 import { ensureUserOrganization } from "@/lib/tenant";
+import {
+  ensureDemoAccessUser,
+  getProvisionedRole,
+  isDemoAccessEnabled,
+  syncUserRoleIfNeeded,
+} from "@/lib/auth-policy";
 
 declare module "next-auth" {
   interface Session {
@@ -71,12 +77,47 @@ export const authConfig: NextAuthConfig = {
 
         if (!passwordValid) return null;
 
+        const role = await syncUserRoleIfNeeded({
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+        });
+
         await prisma.user.update({
           where: { id: user.id },
           data: { lastLogin: new Date() },
         });
 
         const organization = await ensureUserOrganization(user.id);
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.avatarUrl,
+          role,
+          organizationId: organization.id,
+          organizationName: organization.name,
+          organizationSlug: organization.slug,
+        };
+      },
+    }),
+    CredentialsProvider({
+      id: "demo",
+      name: "demo",
+      credentials: {},
+      async authorize() {
+        if (!isDemoAccessEnabled()) {
+          return null;
+        }
+
+        const { user, organization } = await ensureDemoAccessUser();
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() },
+        });
 
         return {
           id: user.id,
@@ -135,12 +176,13 @@ export const authConfig: NextAuthConfig = {
         }
 
         if (!existingUser) {
+          const role = getProvisionedRole(user.email!);
           const newUser = await prisma.user.create({
             data: {
               email: user.email!,
               name: user.name,
               avatarUrl: user.image,
-              role: "CSM",
+              role,
               isActive: true,
               lastLogin: new Date(),
             },
@@ -152,13 +194,20 @@ export const authConfig: NextAuthConfig = {
           user.organizationName = organization.name;
           user.organizationSlug = organization.slug;
         } else {
+          const role = await syncUserRoleIfNeeded({
+            id: existingUser.id,
+            email: existingUser.email,
+            role: existingUser.role,
+            isActive: existingUser.isActive,
+          });
+
           await prisma.user.update({
             where: { email: user.email! },
             data: { lastLogin: new Date() },
           });
           const organization = await ensureUserOrganization(existingUser.id);
           user.id = existingUser.id;
-          user.role = existingUser.role;
+          user.role = role;
           user.organizationId = organization.id;
           user.organizationName = organization.name;
           user.organizationSlug = organization.slug;
