@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useQuery,
   useMutation,
   useQueryClient,
@@ -89,6 +90,7 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
 export function useAccounts(filters: AccountFilters = {}) {
   return useQuery<Account[]>({
     queryKey: ["accounts", filters],
+    placeholderData: keepPreviousData,
     queryFn: () =>
       fetchJSON<Account[]>(
         `/api/accounts${buildQueryString({
@@ -105,6 +107,7 @@ export function useAccounts(filters: AccountFilters = {}) {
 export function useAccount<T = Account>(id: string) {
   return useQuery<T>({
     queryKey: ["accounts", id],
+    placeholderData: keepPreviousData,
     queryFn: () => fetchJSON<T>(`/api/accounts/${id}`),
     enabled: !!id,
   });

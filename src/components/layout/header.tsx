@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { useAppStore } from "@/stores/app-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Building2, LogOut, Menu, ShieldCheck } from "lucide-react";
+import { LogOut, Menu, ShieldCheck } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
 
 export function Header() {
@@ -44,9 +45,7 @@ export function Header() {
 
         <div className="ml-auto flex items-center gap-2.5">
           <div className="hidden items-center gap-3 rounded-full border border-white/70 bg-slate-50/70 px-3 py-1.5 text-xs text-slate-600 xl:flex">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8)] text-white shadow-[0_8px_18px_rgba(37,99,235,0.24)]">
-              <Building2 className="h-4 w-4" />
-            </div>
+            <BrandMark className="h-8 w-8" />
             <div>
               <p className="font-medium text-slate-900">
                 {session?.user?.organizationName ?? "Workspace"}

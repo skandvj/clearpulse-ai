@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -12,9 +13,7 @@ export default function Home() {
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-10">
         <header className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_18px_40px_rgba(15,23,42,0.2)]">
-              <Sparkles className="h-5 w-5" />
-            </div>
+            <BrandMark priority />
             <div>
               <p className="font-display text-lg font-semibold tracking-tight">
                 ClearPulse

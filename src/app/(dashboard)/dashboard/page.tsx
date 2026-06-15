@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageWrapper } from "@/components/layout/page-wrapper";
+import { BrandMark } from "@/components/brand/brand-mark";
+import {
+  LazyKpiHealthBreakdownChart,
+  LazySourceActivityChart,
+} from "@/components/dashboard/lazy-portfolio-charts";
 import { SyncTriggerButton } from "@/components/signals/sync-trigger-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,16 +21,7 @@ import { HealthRing } from "@/components/ui/health-ring";
 import { getServerUser } from "@/lib/auth-helpers";
 import { getDashboardData } from "@/lib/dashboard";
 import { PERMISSIONS, hasPermission } from "@/lib/rbac";
-import {
-  ArrowRight,
-  ExternalLink,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
-import {
-  KpiHealthBreakdownChart,
-  SourceActivityChart,
-} from "@/components/dashboard/portfolio-charts";
+import { ArrowRight, ExternalLink, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +132,7 @@ export default async function DashboardPage() {
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <Badge className="rounded-full border-0 bg-slate-950 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white shadow-none">
-                <Sparkles className="mr-1.5 h-3 w-3" />
+                <BrandMark alt="" className="mr-1.5 h-3 w-3" />
                 {workspaceLabel}
               </Badge>
               <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
@@ -276,7 +272,7 @@ export default async function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <KpiHealthBreakdownChart data={data.kpiHealthBreakdown} />
+              <LazyKpiHealthBreakdownChart data={data.kpiHealthBreakdown} />
             </CardContent>
           </Card>
         </div>
@@ -289,7 +285,7 @@ export default async function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <SourceActivityChart data={data.sourceActivity} />
+              <LazySourceActivityChart data={data.sourceActivity} />
             </CardContent>
           </Card>
 

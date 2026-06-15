@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   useReactTable,
@@ -33,15 +34,23 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HealthRing } from "@/components/ui/health-ring";
 import { HealthStatusBadge } from "@/components/ui/health-badge";
-import { AddAccountDialog } from "@/components/accounts/add-account-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PERMISSIONS } from "@/lib/rbac";
 import {
   useAccounts,
+  type AccountFilters,
   type Account,
   type HealthStatus,
   type Tier,
 } from "@/lib/hooks/use-accounts";
+
+const AddAccountDialog = dynamic(
+  () =>
+    import("@/components/accounts/add-account-dialog").then(
+      (mod) => mod.AddAccountDialog
+    ),
+  { ssr: false }
+);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -276,13 +285,18 @@ export default function AccountsPage() {
 
   const activeSort = sorting[0] ?? { id: "name", desc: false };
 
-  const { data: accounts, isLoading } = useAccounts({
-    search: debouncedSearch || undefined,
-    tier: tierFilter || undefined,
-    healthStatus: statusFilter || undefined,
-    sortBy: activeSort.id,
-    sortOrder: activeSort.desc ? "desc" : "asc",
-  });
+  const filters = useMemo<AccountFilters>(
+    () => ({
+      search: debouncedSearch || undefined,
+      tier: tierFilter || undefined,
+      healthStatus: statusFilter || undefined,
+      sortBy: activeSort.id,
+      sortOrder: activeSort.desc ? "desc" : "asc",
+    }),
+    [activeSort.desc, activeSort.id, debouncedSearch, statusFilter, tierFilter]
+  );
+
+  const { data: accounts, isLoading, isFetching } = useAccounts(filters);
 
   const columns = useColumns();
 
@@ -318,6 +332,11 @@ export default function AccountsPage() {
               Review portfolio health and open each account for detailed context.
             </p>
           </div>
+          {isFetching ? (
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+              Refreshing
+            </span>
+          ) : null}
           {canEdit && (
             <Button variant="outline" onClick={() => setDialogOpen(true)}>
               Add Account

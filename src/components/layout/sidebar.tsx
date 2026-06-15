@@ -1,14 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Role } from "@prisma/client";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 import { getNavItemsForRole } from "@/lib/navigation";
-import { ChevronLeft, ChevronRight, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -80,20 +80,11 @@ export function Sidebar() {
                 href="/dashboard"
                 className="flex min-w-0 flex-1 items-center gap-3 text-[15px] font-semibold tracking-tight text-slate-950"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-[18px] shadow-[0_12px_28px_rgba(37,99,235,0.26)]">
-                  <Image
-                    src="/icon.svg"
-                    alt=""
-                    width={44}
-                    height={44}
-                    className="h-11 w-11 shrink-0"
-                    unoptimized
-                  />
-                </div>
+                <BrandMark alt="" />
                 <div className="min-w-0">
                   <span className="block truncate">ClearPulse</span>
                   <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                    <Sparkles className="h-3 w-3" />
+                    <BrandMark alt="" className="h-3 w-3" />
                     Private workspace
                   </span>
                 </div>
@@ -107,14 +98,7 @@ export function Sidebar() {
                       href="/dashboard"
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] shadow-[0_12px_28px_rgba(37,99,235,0.26)]"
                     >
-                      <Image
-                        src="/icon.svg"
-                        alt="ClearPulse"
-                        width={44}
-                        height={44}
-                        className="h-11 w-11"
-                        unoptimized
-                      />
+                      <BrandMark className="h-11 w-11" />
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="font-medium">

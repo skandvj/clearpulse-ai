@@ -7,7 +7,8 @@ import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,9 +95,7 @@ function LoginForm() {
           <CardContent className="p-8">
             <div className="mb-8 flex items-center gap-3">
               <Link href="/" className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white">
-                  <Sparkles className="h-5 w-5" />
-                </div>
+                <BrandMark priority />
                 <div>
                   <p className="font-display text-lg font-semibold tracking-tight text-slate-950">
                     ClearPulse
